@@ -1,0 +1,15 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/delimiter=;
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/value=1
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/delimiter=;
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/value=COM6
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/delimiter=;
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/operation=replace
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/value=C\:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/PATH/delimiter=;
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/PATH/operation=replace
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/PATH/value=C\:\\msys32\\usr\\bin;C\:\\msys32\\mingw32\\bin;C\:\\Python27;C\:\\Users\\USER\\ESP8266\\xtensa-lx106-elf-win32-1.22.0-92\\bin
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/append=true
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/appendContributed=false

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="isRegEx"/>
+		<item value="NULL" key="selection"/>
+		<item value="false" key="casesensitive"/>
+		<item value="false" key="incremental"/>
+		<item value="true" key="wrap"/>
+		<item value="false" key="wholeword"/>
+		<list key="findhistory">
+			<item value="null"/>
+			<item value="malloc_logger_element"/>
+			<item value="WIFI_CONNECTED_BIT"/>
+			<item value="get_string_from_rom"/>
+			<item value="ACCESS_POINT_PASSWORD"/>
+			<item value="esp_event_loop_init"/>
+			<item value="set_default_wi_fi_settings"/>
+			<item value="uart_config"/>
+		</list>
+		<list key="replacehistory">
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="284" key="DIALOG_WIDTH"/>
+		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
+		<item value="391" key="DIALOG_HEIGHT"/>
+		<item value="1384" key="DIALOG_X_ORIGIN"/>
+		<item value="533" key="DIALOG_Y_ORIGIN"/>
+	</section>
+</section>
