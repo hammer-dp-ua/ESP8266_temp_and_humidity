@@ -29,6 +29,8 @@
 #include "utils.h"
 #include "lwip/sys.h"
 #include "lwip/inet.h"
+#include "sys/socket.h"
+#include "event_groups.h"
 #include "user_main.h"
 
 unsigned int milliseconds_counter_g;
@@ -40,9 +42,6 @@ unsigned int repetitive_ap_connecting_errors_counter_g;
 int connection_error_code_g;
 
 static os_timer_t millisecons_time_serv_g;
-static os_timer_t motion_detectors_ignore_timer_g;
-static os_timer_t immobilizer_beeper_ignore_timer_g;
-static os_timer_t immobilizer_ignore_timer_g;
 static os_timer_t status_sender_timer_g;
 static os_timer_t errors_checker_timer_g;
 static os_timer_t ap_autoconnect_timer_g;
@@ -51,10 +50,9 @@ struct _esp_tcp user_tcp;
 
 unsigned char responses_index;
 char *responses[10];
-unsigned int general_flags;
+static EventGroupHandle_t general_event_group_g;
 
-xSemaphoreHandle requests_binary_semaphore_g;
-xSemaphoreHandle buzzer_semaphore_g;
+SemaphoreHandle_t requests_binary_semaphore_g;
 
 static QueueHandle_t uart0_queue;
 
@@ -100,7 +98,7 @@ unsigned int user_rf_cal_sector_set(void) {
    return rf_cal_sec;
 }
 
-LOCAL void milliseconds_counter() {
+static void milliseconds_counter() {
    milliseconds_counter_g++;
 }
 
@@ -127,55 +125,23 @@ void get_ap_signal_strength(void *arg, STATUS status) {
 void scan_access_point_task(void *pvParameters) {
    long rescan_when_connected_task_delay = 10 * 60 * 1000 / portTICK_RATE_MS; // 10 mins
    long rescan_when_not_connected_task_delay = 10 * 1000 / portTICK_RATE_MS; // 10 secs
+   wifi_scan_config_t scan_config;
+   wifi_ap_record_t scanned_access_points[1];
+
+   scan_config.ssid = ACCESS_POINT_NAME;
+   scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
 
    for (;;) {
-      STATION_STATUS status = wifi_station_get_connect_status();
+      if (esp_wifi_scan_start(&scan_config, true) == ESP_OK && esp_wifi_scan_get_ap_records(1, scanned_access_points) == ESP_OK) {
+         signal_strength_g = scanned_access_points[0].rssi;
 
-      if (status == STATION_GOT_IP) {
-         struct scan_config ap_scan_config;
-
-         ap_scan_config.ssid = ACCESS_POINT_NAME;
-         wifi_station_scan(&ap_scan_config, get_ap_signal_strength);
+         ESP_LOGI(TAG, "Signal strength of AP: %d", signal_strength_g);
 
          vTaskDelay(rescan_when_connected_task_delay);
       } else {
          vTaskDelay(rescan_when_not_connected_task_delay);
       }
    }
-}
-
-void ap_connect_task(void *pvParameters) {
-   STATION_STATUS status = wifi_station_get_connect_status();
-
-   if (status != STATION_GOT_IP) {
-      xTaskCreate(blink_on_send_task, "blink_on_send_task", 180, (void *) AP_CONNECTION_STATUS_LED_PIN_TYPE, 1, NULL);
-      wifi_station_connect(); // Do not call this API in user_init
-   }
-   vTaskDelete(NULL);
-}
-
-void ap_autoconnect() {
-   STATION_STATUS status = wifi_station_get_connect_status();
-
-   if (status != STATION_GOT_IP && status != STATION_CONNECTING) {
-      xTaskCreate(blink_on_send_task, "blink_on_send_task", 180, (void *) AP_CONNECTION_STATUS_LED_PIN_TYPE, 1, NULL);
-      wifi_station_connect(); // Do not call this API in user_init
-   }
-   if (status != STATION_GOT_IP) {
-      repetitive_ap_connecting_errors_counter_g++;
-   }
-
-   if (repetitive_ap_connecting_errors_counter_g == (MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT / 2)) {
-      wifi_station_disconnect();
-   }
-}
-
-void stop_ignoring_immobilizer_beeper() {
-   reset_flag(&general_flags, IGNORE_IMMOBILIZER_BEEPER_FLAG);
-}
-
-void stop_ignoring_immobilizer() {
-   reset_flag(&general_flags, IGNORE_IMMOBILIZER_FLAG);
 }
 
 void successfull_connected_tcp_handler_callback(void *arg) {
@@ -674,17 +640,36 @@ void establish_connection(struct espconn *connection) {
 }
 
 void send_status_info_task(void *pvParameters) {
+   int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
+
+   if(socket_result < 0) {
+      ESP_LOGE(TAG, "Failed to allocate socket");
+   }
+   ESP_LOGI(TAG, "Socket has been allocated");
+
+   struct sockaddr_in destination_address;
+   destination_address.sin_addr.s_addr = inet_addr(SERVER_IP_ADDRESS);
+   destination_address.sin_family = AF_INET;
+   destination_address.sin_port = htons(SERVER_PORT);
+
+   int connection_result = connect(socket_result, (struct sockaddr *) &destination_address, sizeof(destination_address));
+
+   if(connection_result != 0) {
+      ESP_LOGE(TAG, "Socket connection failed. Error: %d", connection_result);
+      close(socket_result);
+   }
+
    #ifdef ALLOW_USE_PRINTF
    printf("send_status_requests_task has been created\n");
    #endif
 
    xSemaphoreTake(requests_binary_semaphore_g, portMAX_DELAY);
 
-   if (read_flag(general_flags, UPDATE_FIRMWARE_FLAG)) {
+   if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       vTaskDelete(NULL);
    }
 
-   if (!read_flag(general_flags, CONNECTED_TO_AP_FLAG)) {
+   if (!is_connected_to_wifi()) {
       #ifdef ALLOW_USE_PRINTF
       printf("Can't send status request, because not connected to AP. Time: %u\n", milliseconds_counter_g);
       #endif
@@ -709,7 +694,7 @@ void send_status_info_task(void *pvParameters) {
    char *reset_reason = "";
    char *system_restart_reason = "";
 
-   if (!read_flag(general_flags, FIRST_STATUS_INFO_SENT_FLAG)) {
+   if (xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG == 0) {
       char build_timestamp_filled[30];
       snprintf(build_timestamp_filled, 30, "%s", __TIMESTAMP__);
       build_timestamp = build_timestamp_filled;
@@ -809,7 +794,7 @@ void send_status_info_task(void *pvParameters) {
 }
 
 void send_status_info() {
-   xTaskCreate(send_status_info_task, STATUS_INFO_TASK_NAME, 300, NULL, 1, NULL);
+   xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
 
 void schedule_sending_status_info(unsigned int timeout_ms) {
@@ -987,34 +972,6 @@ void send_general_request_task(void *pvParameters) {
    }
 }
 
-void wifi_event_handler_callback(System_Event_t *event) {
-   switch (event->event_id) {
-      case EVENT_STAMODE_CONNECTED:
-         #ifdef ALLOW_USE_PRINTF
-         printf("\n Connected to AP\n");
-         #endif
-
-         pin_output_set(AP_CONNECTION_STATUS_LED_PIN);
-         set_flag(&general_flags, CONNECTED_TO_AP_FLAG);
-         turn_motion_sensors_on();
-         repetitive_ap_connecting_errors_counter_g = 0;
-
-         if (!read_flag(general_flags, FIRST_STATUS_INFO_SENT_FLAG)) {
-            send_status_info();
-         }
-         break;
-      case EVENT_STAMODE_DISCONNECTED:
-         #ifdef ALLOW_USE_PRINTF
-         printf("\n Disconnected from AP\n");
-         #endif
-
-         pin_output_reset(AP_CONNECTION_STATUS_LED_PIN);
-         pin_output_reset(SERVER_AVAILABILITY_STATUS_LED_PIN);
-         reset_flag(&general_flags, CONNECTED_TO_AP_FLAG);
-         break;
-   }
-}
-
 void pins_config() {
    gpio_config_t output_pins;
    output_pins.mode = GPIO_MODE_OUTPUT;
@@ -1035,47 +992,47 @@ static void uart_event_task(void *pvParameters) {
          //ESP_LOGI(TAG, "uart[%d] event:", EX_UART_NUM);
 
          switch (event.type) {
-         // Event of UART receiving data
-         // We'd better handler data event fast, there would be much more data events than
-         // other types of events. If we take too much time on data event, the queue might be full.
-         case UART_DATA:
-            //ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
-            int read_bytes = uart_read_bytes(UART_NUM_0, dtmp, event.size, portMAX_DELAY);
-            //ESP_LOGI(TAG, "[DATA EVT]:");
-            break;
+            // Event of UART receiving data
+            // We'd better handler data event fast, there would be much more data events than
+            // other types of events. If we take too much time on data event, the queue might be full.
+            case UART_DATA:
+               //ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
+               int read_bytes = uart_read_bytes(UART_NUM_0, dtmp, event.size, portMAX_DELAY);
+               //ESP_LOGI(TAG, "[DATA EVT]:");
+               break;
 
-         // Event of HW FIFO overflow detected
-         case UART_FIFO_OVF:
-            //ESP_LOGI(TAG, "hw fifo overflow");
-            // If fifo overflow happened, you should consider adding flow control for your application.
-            // The ISR has already reset the rx FIFO,
-            // As an example, we directly flush the rx buffer here in order to read more data.
-            uart_flush_input(UART_NUM_0);
-            xQueueReset(uart0_queue);
-            break;
+            // Event of HW FIFO overflow detected
+            case UART_FIFO_OVF:
+               //ESP_LOGI(TAG, "hw fifo overflow");
+               // If fifo overflow happened, you should consider adding flow control for your application.
+               // The ISR has already reset the rx FIFO,
+               // As an example, we directly flush the rx buffer here in order to read more data.
+               uart_flush_input(UART_NUM_0);
+               xQueueReset(uart0_queue);
+               break;
 
-         // Event of UART ring buffer full
-         case UART_BUFFER_FULL:
-            //ESP_LOGI(TAG, "ring buffer full");
-            // If buffer full happened, you should consider increasing your buffer size
-            // As an example, we directly flush the rx buffer here in order to read more data.
-            uart_flush_input(UART_NUM_0);
-            xQueueReset(uart0_queue);
-            break;
+            // Event of UART ring buffer full
+            case UART_BUFFER_FULL:
+               //ESP_LOGI(TAG, "ring buffer full");
+               // If buffer full happened, you should consider increasing your buffer size
+               // As an example, we directly flush the rx buffer here in order to read more data.
+               uart_flush_input(UART_NUM_0);
+               xQueueReset(uart0_queue);
+               break;
 
-         case UART_PARITY_ERR:
-            //ESP_LOGI(TAG, "uart parity error");
-            break;
+            case UART_PARITY_ERR:
+               //ESP_LOGI(TAG, "uart parity error");
+               break;
 
-         // Event of UART frame error
-         case UART_FRAME_ERR:
-            //ESP_LOGI(TAG, "uart frame error");
-            break;
+            // Event of UART frame error
+            case UART_FRAME_ERR:
+               //ESP_LOGI(TAG, "uart frame error");
+               break;
 
-         // Others
-         default:
-            //ESP_LOGI(TAG, "uart event type: %d", event.type);
-            break;
+            // Others
+            default:
+               //ESP_LOGI(TAG, "uart event type: %d", event.type);
+               break;
          }
       }
    }
@@ -1085,7 +1042,56 @@ static void uart_event_task(void *pvParameters) {
    vTaskDelete(NULL);
 }
 
-void uart_config() {
+static void on_wifi_connected()
+{
+   gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
+   repetitive_ap_connecting_errors_counter_g = 0;
+
+   if (xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG == 0) {
+      send_status_info();
+   }
+}
+
+static void on_wifi_disconnected()
+{
+   gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
+}
+
+static void blink_on_send(gpio_num_t pin) {
+   int initial_pin_state = gpio_get_level(pin);
+   bool pin_state_changed_during_blinking = false;
+   unsigned char i;
+
+   for (i = 0; i < 4; i++) {
+      bool set_pin = initial_pin_state == 1 ? i % 2 == 1 : i % 2 == 0;
+
+      if (set_pin) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+      vTaskDelay(100 / portTICK_RATE_MS);
+   }
+
+   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
+      if (is_connected_to_wifi()) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+   }
+}
+
+static void blink_on_wifi_connection_task(void *pvParameters) {
+   blink_on_send(AP_CONNECTION_STATUS_LED_PIN);
+   vTaskDelete(NULL);
+}
+
+static void blink_on_wifi_connection() {
+   xTaskCreate(blink_on_wifi_connection_task, "blink_on_wifi_connection_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+}
+
+static void uart_config() {
    uart_config_t uart_config;
    uart_config.baud_rate = 115200;
    uart_config.data_bits = UART_DATA_8_BITS;
@@ -1095,29 +1101,11 @@ void uart_config() {
    uart_param_config(UART_NUM_0, &uart_config);
 
    uart_driver_install(UART_NUM_0, UART_BUF_SIZE, 0, 10, &uart0_queue);
-   xTaskCreate(uart_event_task, "uart_event_task", configMINIMAL_STACK_SIZE, NULL, 12, NULL);
-}
-
-void stop_ignoring_motion_detectors() {
-   reset_flag(&general_flags, IGNORE_MOTION_DETECTORS_FLAG);
-}
-
-void turn_motion_sensors_on() {
-   set_flag(&general_flags, IGNORE_MOTION_DETECTORS_FLAG);
-
-   os_timer_disarm(&motion_detectors_ignore_timer_g);
-   os_timer_setfn(&motion_detectors_ignore_timer_g, (os_timer_func_t *) stop_ignoring_motion_detectors, NULL);
-   os_timer_arm(&motion_detectors_ignore_timer_g, IGNORE_MOTION_DETECTORS_TIMEOUT_AFTER_TURN_ON_SEC * 1000, false);
-
-   pin_output_set(MOTION_SENSORS_ENABLE_PIN);
-}
-
-bool are_motion_sensors_turned_on() {
-   return read_output_pin_state(MOTION_SENSORS_ENABLE_PIN);
+   xTaskCreate(uart_event_task, "uart_event_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
 
 /**
- * Created as workaround to handling issue.
+ * Created as a workaround to handle unknown issues.
  */
 void check_errors_amount() {
    bool restart = false;
@@ -1138,119 +1126,38 @@ void check_errors_amount() {
       #endif
 
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
-      STATION_STATUS status = wifi_station_get_connect_status();
+      //STATION_STATUS status = wifi_station_get_connect_status();
 
       system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
-      system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &status, 4);
+      system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, 0xFFFF, 4);
       restart = true;
    }
+
    if (restart) {
-      system_restart();
-   }
-}
-
-void blink_on_send_task(void *pvParameters) {
-   #ifdef ALLOW_USE_PRINTF
-   printf("blink_on_send_task has been created. ");
-   #endif
-
-   if (pvParameters == NULL) {
-      vTaskDelete(NULL);
-   }
-
-   LED_PIN_TYPE pin = (LED_PIN_TYPE) pvParameters;
-
-   bool initial_pin_state = read_output_pin_state(pin);
-   bool pin_state_changed_during_blinking = false;
-   unsigned char i;
-
-   for (i = 0; i < 4; i++) {
-      bool set_pin = initial_pin_state ? i % 2 == 1 : i % 2 == 0;
-
-      if (set_pin) {
-         pin_output_set(pin);
-      } else {
-         pin_output_reset(pin);
-      }
-      vTaskDelay(100 / portTICK_RATE_MS);
-   }
-
-   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
-      if (read_flag(general_flags, CONNECTED_TO_AP_FLAG)) {
-         pin_output_set(pin);
-      } else {
-         pin_output_reset(pin);
-      }
-   } else if (pin == SERVER_AVAILABILITY_STATUS_LED_PIN) {
-      if (read_flag(general_flags, REQUEST_ERROR_OCCURRED_FLAG)) {
-         pin_output_reset(pin);
-      } else {
-         pin_output_set(pin);
-      }
-   }
-   vTaskDelete(NULL);
-}
-
-void testing_task(void *pvParameters) {
-   for (;;) {
-      xTaskCreate(input_pins_analyzer_task, "input_pins_analyzer_task", 256, "pin:MOTION_SENSOR_2", 1, NULL);
-
-      vTaskDelay(5000 / portTICK_RATE_MS);
-   }
-}
-
-void send_random_alarm_from_ms(const char *rom_string) {
-   unsigned int next_delay = generate_rand(3000, 60000);
-
-   #ifdef ALLOW_USE_PRINTF
-   printf("\n Next delay of %s task: %ums\n", pcTaskGetTaskName(NULL), next_delay);
-   #endif
-
-   vTaskDelay(next_delay / portTICK_RATE_MS);
-
-   char *pin = get_string_from_rom(rom_string);
-   xTaskCreate(input_pins_analyzer_task, "input_pins_analyzer_task", 256, pin, 1, NULL);
-}
-
-void send_random_alarms_from_ms_1_task(void *pvParameters) {
-   for (;;) {
-      send_random_alarm_from_ms(MOTION_SENSOR_1_PIN_WITH_PREFIX);
-   }
-}
-
-void send_random_alarms_from_ms_2_task(void *pvParameters) {
-   for (;;) {
-      send_random_alarm_from_ms(MOTION_SENSOR_2_PIN_WITH_PREFIX);
-   }
-}
-
-void send_random_alarms_from_ms_3_task(void *pvParameters) {
-   for (;;) {
-      send_random_alarm_from_ms(MOTION_SENSOR_3_PIN_WITH_PREFIX);
+      esp_restart();
    }
 }
 
 void user_init(void) {
+   general_event_group_g = xEventGroupCreate();
+
    pins_config();
    uart_config();
 
-   vTaskDelay(1000 / portTICK_PERIOD_MS);
+   vTaskDelay(1000 / portTICK_RATE_MS);
 
-   #ifdef ALLOW_USE_PRINTF
-   printf("\nSoftware is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
-   #endif
+   //ESP_LOGI(TAG, "Software is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
 
-   vSemaphoreCreateBinary(requests_binary_semaphore_g);
+   requests_binary_semaphore_g = xSemaphoreCreateBinary();
 
-   wifi_set_event_handler_cb(wifi_event_handler_callback);
-   set_default_wi_fi_settings();
-   espconn_init();
+   //wifi_set_event_handler_cb(wifi_event_handler_callback);
+   wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
-   os_timer_setfn(&ap_autoconnect_timer_g, (os_timer_func_t *) ap_autoconnect, NULL);
-   os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
-   xTaskCreate(ap_connect_task, "ap_connect_task", 180, NULL, 1, NULL);
+   //os_timer_setfn(&ap_autoconnect_timer_g, (os_timer_func_t *) ap_autoconnect, NULL);
+   //os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
+   //xTaskCreate(ap_connect_task, "ap_connect_task", 180, NULL, 1, NULL);
 
-   xTaskCreate(scan_access_point_task, "scan_access_point_task", 256, NULL, 1, NULL);
+   xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    //xTaskCreate(testing_task, "testing_task", 200, NULL, 1, NULL);
 
@@ -1258,8 +1165,4 @@ void user_init(void) {
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
 
    start_100millisecons_counter();
-
-   //xTaskCreate(send_random_alarms_from_ms_1_task, "ms_1_task", 180, NULL, 1, NULL);
-   //xTaskCreate(send_random_alarms_from_ms_2_task, "ms_2_task", 180, NULL, 1, NULL);
-   //xTaskCreate(send_random_alarms_from_ms_3_task, "ms_3_task", 180, NULL, 1, NULL);
 }

@@ -1,29 +1,17 @@
 #include "utils.h"
 
 // FreeRTOS event group to signal when we are connected
+// Max 24 bits when configUSE_16_BIT_TICKS is 0
 static EventGroupHandle_t wifi_event_group;
-
 /*
  * The event group allows multiple bits for each event,
  * but we only care about one event - are we connected
  * to the AP with an IP?
  */
-const int WIFI_CONNECTED_BIT = BIT0;
-
-void set_flag(unsigned int *flags, unsigned int flag) {
-   *flags |= flag;
-}
-
-void reset_flag(unsigned int *flags, unsigned int flag) {
-   *flags &= ~(*flags & flag);
-}
-
-bool read_flag(unsigned int flags, unsigned int flag) {
-   return (flags & flag) ? true : false;
-}
+static const int WIFI_CONNECTED_BIT = (1 << 0);
 
 /**
- * Do not forget to call free() function on returned pointer when it's no longer needed
+ * Do not forget to call free() function on returned pointer when it's no longer needed.
  *
  * *parameters - array of pointers to strings. The last parameter has to be NULL
  */
@@ -118,7 +106,7 @@ void *set_string_parameters(char string[], char *parameters[]) {
    return allocated_result;
 }
 
-LOCAL void calculate_rom_string_length_or_fill_malloc(unsigned short *string_length, char *result, const char *rom_string) {
+static void calculate_rom_string_length_or_fill_malloc(unsigned short *string_length, char *result, const char *rom_string) {
    unsigned char calculate_string_length = *string_length ? false : true;
    unsigned short calculated_string_length = 0;
    unsigned int *rom_string_aligned = (unsigned int*) (((unsigned int) (rom_string)) & ~3); // Could be saved in not 4 bytes aligned address
@@ -199,24 +187,6 @@ LOCAL void calculate_rom_string_length_or_fill_malloc(unsigned short *string_len
    }
 }
 
-/**
- * Do not forget to call free when a string is not required anymore
- */
-char *get_string_from_rom(const char *rom_string) {
-   unsigned short string_length = 0;
-
-   calculate_rom_string_length_or_fill_malloc(&string_length, NULL, rom_string);
-
-   if (!string_length) {
-      return NULL;
-   }
-
-   char *result = MALLOC(string_length + 1, __LINE__, 0xFFFFFFFF); // 1 for the last empty character
-
-   calculate_rom_string_length_or_fill_malloc(&string_length, result, rom_string);
-   return result;
-}
-
 bool compare_strings(char *string1, char *string2) {
    if (string1 == NULL || string2 == NULL) {
       return false;
@@ -266,37 +236,42 @@ char *generate_reset_reason() {
    return reset_reason;
 }
 
-static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
-    switch(event->event_id) {
-    case SYSTEM_EVENT_STA_START:
-        esp_wifi_connect();
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-        ESP_LOGI(TAG, "got ip: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        break;
-    case SYSTEM_EVENT_AP_STACONNECTED:
-        ESP_LOGI(TAG, "station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
-        break;
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
-        ESP_LOGI(TAG, "station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        esp_wifi_connect();
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        break;
-    default:
-        break;
-    }
-    return ESP_OK;
+static esp_err_t esp_event_handler(void *ctx, system_event_t *event, void (*on_connected)(),
+                                                                     void (*on_disconnected)(),
+                                                                     void (*on_connection)()) {
+   switch(event->event_id) {
+      case SYSTEM_EVENT_STA_START:
+         esp_wifi_connect();
+         on_connection();
+         break;
+      case SYSTEM_EVENT_STA_GOT_IP:
+         ESP_LOGI(TAG, "got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+         on_connected();
+         break;
+      case SYSTEM_EVENT_AP_STACONNECTED:
+         ESP_LOGI(TAG, "station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
+         break;
+      case SYSTEM_EVENT_AP_STADISCONNECTED:
+         ESP_LOGI(TAG, "station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
+         break;
+      case SYSTEM_EVENT_STA_DISCONNECTED:
+         on_disconnected();
+         //esp_wifi_connect();
+         on_connection();
+         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+         break;
+      default:
+         break;
+   }
+   return ESP_OK;
 }
 
-// Do not call this function in user_init because of wifi_station_disconnect and wifi_station_connect
-void set_default_wi_fi_settings() {
+void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_connection)()) {
    wifi_event_group = xEventGroupCreate();
 
    tcpip_adapter_init();
-   ESP_ERROR_CHECK(esp_event_loop_init(esp_event_handler, NULL));
+   ESP_ERROR_CHECK(esp_event_loop_init(esp_event_handler, NULL, on_connected, on_disconnected, on_connection));
 
    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -311,125 +286,10 @@ void set_default_wi_fi_settings() {
    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
    ESP_ERROR_CHECK(esp_wifi_start());
 
-   ESP_LOGI(TAG, "set_default_wi_fi_settings finished.");
-
-   /*wifi_set_opmode(STATION_MODE);
-   wifi_station_set_auto_connect(false);
-   wifi_station_set_reconnect_policy(false);
-   wifi_station_dhcpc_stop();
-
-   if (wifi_station_disconnect()) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("Disconnected from AP\n");
-      #endif
-   }
-
-   struct station_config station_config_settings;
-
-   wifi_station_get_config_default(&station_config_settings);
-
-   char *default_access_point_password = get_string_from_rom(ACCESS_POINT_PASSWORD);
-
-   if (strncmp(ACCESS_POINT_NAME, station_config_settings.ssid, 32) != 0
-         || strncmp(default_access_point_password, station_config_settings.password, 64) != 0) {
-      struct station_config station_config_settings_to_save;
-
-      memcpy(&station_config_settings_to_save.ssid, ACCESS_POINT_NAME, 32);
-      memcpy(&station_config_settings_to_save.password, default_access_point_password, 64);
-      wifi_station_set_config(&station_config_settings_to_save);
-   }
-   FREE(default_access_point_password);
-
-   struct ip_info current_ip_info;
-   wifi_get_ip_info(STATION_IF, &current_ip_info);
-   char *current_ip = ipaddr_ntoa(&current_ip_info.ip);
-   char *own_ip_address = get_string_from_rom(OWN_IP_ADDRESS);
-
-   if (strncmp(current_ip, own_ip_address, 15) != 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("Current IP address: %s\n", current_ip);
-      #endif
-
-      char *own_netmask = get_string_from_rom(OWN_NETMASK);
-      char *own_getaway_address = get_string_from_rom(OWN_GETAWAY_ADDRESS);
-      struct ip_info ip_info_to_set;
-
-      ip_info_to_set.ip.addr = ipaddr_addr(own_ip_address);
-      ip_info_to_set.netmask.addr = ipaddr_addr(own_netmask);
-      ip_info_to_set.gw.addr = ipaddr_addr(own_getaway_address);
-      wifi_set_ip_info(STATION_IF, &ip_info_to_set);
-      FREE(own_netmask);
-      FREE(own_getaway_address);
-   }
-   FREE(current_ip);
-   FREE(own_ip_address);
-
-   if (wifi_station_connect()) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("Connected to AP\n");
-      #endif
-   }*/
+   ESP_LOGI(TAG, "set_default_wi_fi_settings finished");
 }
 
-/**
- * @param pin : GPIO pin GPIO_Pin_x
- */
-void pin_output_set(unsigned int pin) {
-   GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pin);
-}
-
-/**
- * @param pin : GPIO pin GPIO_Pin_x
- */
-void pin_output_reset(unsigned int pin) {
-   GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pin);
-}
-
-/**
- * @param pin : GPIO pin GPIO_Pin_x
- */
-bool read_output_pin_state(unsigned int pin) {
-   return (GPIO_REG_READ(GPIO_OUT_ADDRESS) & pin) ? true : false;
-}
-
-/**
- * @param pin : GPIO pin GPIO_Pin_x
- */
-bool read_input_pin_state(unsigned int pin) {
-   return (GPIO_REG_READ(GPIO_IN_ADDRESS) & pin) ? true : false;
-}
-
-LOCAL unsigned int replace_zeroes(unsigned int to_be_replaced_value) {
-   unsigned char bits;
-   unsigned int to_be_replaced_value_tmp = to_be_replaced_value;
-
-   for (bits = 0; bits <= 32 && to_be_replaced_value_tmp > 0; bits++) {
-      to_be_replaced_value_tmp >>= 1;
-   }
-
-   #ifdef ALLOW_USE_PRINTF
-   printf("bits: %u\n", bits);
-   #endif
-
-   unsigned int returning_value = 0;
-   while (bits > 0) {
-      returning_value <<= 1;
-      returning_value |= 1;
-      bits--;
-   }
-   return returning_value;
-}
-
-unsigned int generate_rand(unsigned int min_value, unsigned int max_value) {
-   unsigned int generated_random = rand();
-   unsigned int max_value_with_replaced_zeroes = replace_zeroes(max_value);
-   unsigned int final_random = generated_random & max_value_with_replaced_zeroes;
-
-   if (final_random > max_value) {
-      return max_value;
-   } else if (final_random < min_value) {
-      return min_value;
-   } else {
-      return final_random;
-   }
+bool is_connected_to_wifi()
+{
+   return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) == WIFI_CONNECTED_BIT;
 }

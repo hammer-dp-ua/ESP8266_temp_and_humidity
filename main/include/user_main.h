@@ -1,37 +1,30 @@
 #ifndef MAIN_HEADER
 #define MAIN_HEADER
 
-#define enable_pins_interrupt()  _xt_isr_unmask(1<<ETS_GPIO_INUM)
-#define disable_pins_interrupt() _xt_isr_mask(1<<ETS_GPIO_INUM)
-
-#define AP_CONNECTION_STATUS_LED_PIN         GPIO_Pin_5
-#define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_Pin_4
+#define AP_CONNECTION_STATUS_LED_PIN         GPIO_NUM_5
+#define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_NUM_4
 #define MOTION_DETECTOR_INPUT_PIN_ID         14
 #define MOTION_DETECTOR_INPUT_PIN            BIT(MOTION_DETECTOR_INPUT_PIN_ID)
 #define MOTION_DETECTOR_INPUT_MW_LED_PIN_ID  12
 #define MOTION_DETECTOR_INPUT_MW_LED_PIN     BIT(MOTION_DETECTOR_INPUT_MW_LED_PIN_ID)
 #define MOTION_DETECTOR_ENABLE_PIN           GPIO_Pin_13
 
-#ifndef true // needed only for Eclipse
-   typedef unsigned char bool;
-   #define true 1
-   #define false 0
-#endif
-
 #define LONG_POLLING_REQUEST_ERROR_OCCURRED_FLAG   1
 #define SERVER_IS_AVAILABLE_FLAG                   2
-#define UPDATE_FIRMWARE_FLAG                       4
+#define UPDATE_FIRMWARE_FLAG                       (1 << 1)
 #define REQUEST_ERROR_OCCURRED_FLAG                8
 #define IGNORE_ALARMS_FLAG                         16
 #define IGNORE_FALSE_ALARMS_FLAG                   32
 #define IGNORE_MOTION_DETECTOR_FLAG                64
 #define MANUALLY_IGNORE_ALARMS_FLAG                128
-#define FIRST_STATUS_INFO_SENT_FLAG                256
+#define FIRST_STATUS_INFO_SENT_FLAG                (1 << 0) //( 1 << 4 )
 
 #define REQUEST_IDLE_TIME_ON_ERROR        (10000 / portTICK_RATE_MS) // 10 sec
 #define REQUEST_MAX_DURATION_TIME         (10000 / portTICK_RATE_MS) // 10 sec
 #define STATUS_REQUESTS_SEND_INTERVAL_MS  (30 * 1000)
 #define STATUS_REQUESTS_SEND_INTERVAL     (STATUS_REQUESTS_SEND_INTERVAL_MS / portTICK_RATE_MS) // 30 sec
+
+#define ERRORS_CHECKER_INTERVAL_MS        (30 * 1000)
 
 #define IGNORE_MOTION_DETECTOR_TIMEOUT_AFTER_TURN_ON_SEC 60
 
@@ -45,16 +38,27 @@
    #error "Check constants values"
 #endif
 
+#define MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT 15
+
 #define UART_BUF_SIZE (UART_FIFO_LEN + 1)
 #define UART_RD_BUF_SIZE (UART_BUF_SIZE)
+
+#define SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS  64
+#define CONNECTION_ERROR_CODE_RTC_ADDRESS       SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS + 1
 
 typedef enum {
    ALARM,
    FALSE_ALARM
 } GeneralRequestType;
 
-char RESPONSE_SERVER_SENT_OK[] ICACHE_RODATA_ATTR = "\"statusCode\":\"OK\"";
-char STATUS_INFO_POST_REQUEST[] ICACHE_RODATA_ATTR =
+typedef enum {
+   ACCESS_POINT_CONNECTION_ERROR = 1,
+   REQUEST_CONNECTION_ERROR,
+   SOFTWARE_UPGRADE
+} SYSTEM_RESTART_REASON_TYPE;
+
+const char RESPONSE_SERVER_SENT_OK[] = "\"statusCode\":\"OK\"";
+const char STATUS_INFO_POST_REQUEST[] =
       "POST /server/esp8266/statusInfo HTTP/1.1\r\n"
       "Content-Length: <1>\r\n"
       "Host: <2>\r\n"
@@ -63,7 +67,7 @@ char STATUS_INFO_POST_REQUEST[] ICACHE_RODATA_ATTR =
       "Connection: close\r\n"
       "Accept: application/json\r\n\r\n"
       "<3>\r\n";
-char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] ICACHE_RODATA_ATTR =
+const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "{\"gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"
@@ -71,27 +75,27 @@ char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] ICACHE_RODATA_ATTR =
       "\"buildTimestamp\":\"<5>\","
       "\"freeHeapSpace\":<6>,"
       "\"resetReason\":\"<7>\"}";
-char ALARM_GET_REQUEST[] ICACHE_RODATA_ATTR =
+const char ALARM_GET_REQUEST[] =
       "GET /server/esp8266/alarm?alarmSource=<1> HTTP/1.1\r\n"
       "Host: <2>\r\n"
       "User-Agent: ESP8266\r\n"
       "Connection: close\r\n"
       "Accept: application/json\r\n\r\n";
-char FALSE_ALARM_GET_REQUEST[] ICACHE_RODATA_ATTR =
+const char FALSE_ALARM_GET_REQUEST[] =
       "GET /server/esp8266/falseAlarm?alarmSource=<1> HTTP/1.1\r\n"
       "Host: <2>\r\n"
       "User-Agent: ESP8266\r\n"
       "Connection: close\r\n"
       "Accept: application/json\r\n\r\n";
-char UPDATE_FIRMWARE[] ICACHE_RODATA_ATTR = "\"updateFirmware\":true";
-char MANUALLY_IGNORE_ALARMS[] ICACHE_RODATA_ATTR = "\"ignoreAlarms\":true";
-char FIRMWARE_UPDATE_GET_REQUEST[] ICACHE_RODATA_ATTR =
+const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
+const char MANUALLY_IGNORE_ALARMS[] = "\"ignoreAlarms\":true";
+const char FIRMWARE_UPDATE_GET_REQUEST[] =
       "GET /esp8266_fota/<1> HTTP/1.1\r\n"
       "Host: <2>\r\n"
       "User-Agent: ESP8266\r\n"
       "Connection: close\r\n\r\n";
-char MW_LED[] ICACHE_RODATA_ATTR = "MW_LED";
-char MOTION_SENSOR[] ICACHE_RODATA_ATTR = "MOTION_SENSOR";
+const char MW_LED[] = "MW_LED";
+const char MOTION_SENSOR[] = "MOTION_SENSOR";
 
 struct connection_user_data {
    bool response_received;
