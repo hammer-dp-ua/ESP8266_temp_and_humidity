@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include "global_definitions.h"
+#include "esp_libc.h"
 
 #ifdef USE_MALLOC_LOGGER
    #define FREE(allocated_address_element_to_free)          free_logger(allocated_address_element_to_free)
    #define MALLOC(element_length, line_no, allocated_time)  malloc_logger(element_length, line_no, allocated_time)
    #define ZALLOC(element_length, line_no, allocated_time)  zalloc_logger(element_length, line_no, allocated_time)
 #else
-   #define FREE(allocated_address_element_to_free)          free(allocated_address_element_to_free)
-   #define MALLOC(element_length, line_no, allocated_time)  malloc(element_length)
-   #define ZALLOC(element_length, line_no, allocated_time)  zalloc(element_length)
+   #define FREE(allocated_address_element_to_free)          os_free(allocated_address_element_to_free)
+   #define MALLOC(element_length, line_no, allocated_time)  os_malloc(element_length)
+   #define ZALLOC(element_length, line_no, allocated_time)  os_zalloc(element_length)
 #endif
 
 #ifndef MALLOC_LOGGER

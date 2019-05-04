@@ -10,6 +10,10 @@ static EventGroupHandle_t wifi_event_group;
  */
 static const int WIFI_CONNECTED_BIT = (1 << 0);
 
+static void (*on_wifi_connected)();
+static void (*on_wifi_disconnected)();
+static void (*on_wifi_connection)();
+
 /**
  * Do not forget to call free() function on returned pointer when it's no longer needed.
  *
@@ -128,18 +132,16 @@ bool compare_strings(char *string1, char *string2) {
    return result;
 }
 
-static esp_err_t esp_event_handler(void *ctx, system_event_t *event, void (*on_connected)(),
-                                                                     void (*on_disconnected)(),
-                                                                     void (*on_connection)()) {
+static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
    switch(event->event_id) {
       case SYSTEM_EVENT_STA_START:
          esp_wifi_connect();
-         on_connection();
+         on_wifi_connection();
          break;
       case SYSTEM_EVENT_STA_GOT_IP:
          ESP_LOGI(TAG, "got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
          xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-         on_connected();
+         on_wifi_connected();
          break;
       case SYSTEM_EVENT_AP_STACONNECTED:
          ESP_LOGI(TAG, "station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
@@ -148,9 +150,9 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event, void (*on_c
          ESP_LOGI(TAG, "station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
          break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
-         on_disconnected();
+         on_wifi_disconnected();
          //esp_wifi_connect();
-         on_connection();
+         on_wifi_connection();
          xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
          break;
       default:
@@ -160,19 +162,21 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event, void (*on_c
 }
 
 void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_connection)()) {
+   on_wifi_connected = on_connected;
+   on_wifi_disconnected = on_disconnected;
+   on_wifi_connection = on_connection;
+
    wifi_event_group = xEventGroupCreate();
 
    tcpip_adapter_init();
-   ESP_ERROR_CHECK(esp_event_loop_init(esp_event_handler, NULL, on_connected, on_disconnected, on_connection));
+   ESP_ERROR_CHECK(esp_event_loop_init(esp_event_handler, NULL));
 
    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
    wifi_config_t wifi_config;
    memcpy(&wifi_config.sta.ssid, ACCESS_POINT_NAME, 32);
-   char *default_access_point_password = get_string_from_rom(ACCESS_POINT_PASSWORD);
-   memcpy(&wifi_config.sta.password, default_access_point_password, 64);
-   FREE(default_access_point_password);
+   memcpy(&wifi_config.sta.password, ACCESS_POINT_PASSWORD, 64);
 
    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));

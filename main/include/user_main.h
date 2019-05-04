@@ -92,19 +92,8 @@ const char FIRMWARE_UPDATE_GET_REQUEST[] =
 const char MW_LED[] = "MW_LED";
 const char MOTION_SENSOR[] = "MOTION_SENSOR";
 
-struct connection_user_data {
-   bool response_received;
-   char *request;
-   char *response;
-   void (*execute_on_disconnect)(struct espconn *connection);
-   void (*execute_on_error)(struct espconn *connection);
-   xTaskHandle timeout_request_supervisor_task;
-   xTaskHandle parent_task;
-   portTickType request_max_duration_time;
-};
-
 void pins_config();
-void uart_config();
+static void uart_config();
 void scan_access_point_task(void *pvParameters);
 void send_long_polling_requests_task(void *pvParameters);
 void autoconnect_task(void *pvParameters);
@@ -117,8 +106,6 @@ void tcp_response_received_handler_callback(void *arg, char *pdata, unsigned sho
 void tcp_request_successfully_sent_handler_callback();
 void tcp_request_successfully_written_into_buffer_handler_callback();
 void upgrade_firmware();
-void establish_connection(struct espconn *connection);
-void request_finish_action(struct espconn *connection);
 void pins_interrupt_handler();
 void stop_ignoring_alarms_timer_callback();
 void stop_ignoring_false_alarms_timer_callback();

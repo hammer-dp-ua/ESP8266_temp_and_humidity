@@ -13,6 +13,10 @@
 
 //#include "esp_common.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+#include "freertos/semphr.h"
+
 // driver libs
 #include "driver/uart.h"
 #include "driver/gpio.h"
@@ -21,9 +25,6 @@
 #include "esp_wifi.h"
 #include "global_definitions.h"
 #include "malloc_logger.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-#include "freertos/semphr.h"
 #include "device_settings.h"
 //#include "espconn.h"
 #include "string.h"
@@ -111,13 +112,15 @@ void scan_access_point_task(void *pvParameters) {
    long rescan_when_connected_task_delay = 10 * 60 * 1000 / portTICK_RATE_MS; // 10 mins
    long rescan_when_not_connected_task_delay = 10 * 1000 / portTICK_RATE_MS; // 10 secs
    wifi_scan_config_t scan_config;
+   unsigned short scanned_access_points_amount = 1;
    wifi_ap_record_t scanned_access_points[1];
 
    scan_config.ssid = ACCESS_POINT_NAME;
    scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
 
    for (;;) {
-      if (esp_wifi_scan_start(&scan_config, true) == ESP_OK && esp_wifi_scan_get_ap_records(1, scanned_access_points) == ESP_OK) {
+      if (esp_wifi_scan_start(&scan_config, true) == ESP_OK &&
+            esp_wifi_scan_get_ap_records(&scanned_access_points_amount, scanned_access_points) == ESP_OK) {
          signal_strength_g = scanned_access_points[0].rssi;
 
          ESP_LOGI(TAG, "Signal strength of AP: %d", signal_strength_g);
@@ -338,7 +341,7 @@ void send_status_info_task(void *pvParameters) {
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
-   char *device_name = get_string_from_rom(DEVICE_NAME);
+   char *device_name = DEVICE_NAME;
    char errors_counter[6];
    snprintf(errors_counter, 6, "%u", errors_counter_g);
    char pending_connection_errors_counter[4];
@@ -347,11 +350,11 @@ void send_status_info_task(void *pvParameters) {
    snprintf(uptime, 11, "%u", milliseconds_counter_g / MILLISECONDS_COUNTER_DIVIDER);
    char *build_timestamp = "";
    char free_heap_space[7];
-   snprintf(free_heap_space, 7, "%u", xPortGetFreeHeapSize());
+   snprintf(free_heap_space, 7, "%u", esp_get_free_heap_size());
    char *reset_reason = "";
    char *system_restart_reason = "";
 
-   if (xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG == 0) {
+   if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       char build_timestamp_filled[30];
       snprintf(build_timestamp_filled, 30, "%s", __TIMESTAMP__);
       build_timestamp = build_timestamp_filled;
@@ -432,9 +435,9 @@ void send_status_info_task(void *pvParameters) {
    espconn_regist_recvcb(connection, tcp_response_received_handler_callback);*/
    //espconn_regist_write_finish(&connection, tcp_request_successfully_written_into_buffer_handler_callback);
 
-   int connection_result = send(socket_result, request, strlen(request), 0);
-   if (connection_result < 0) {
-       ESP_LOGE(TAG, "Error occurred during sending. Error no.: %d", connection_result);
+   int send_result = send(socket_result, request, strlen(request), 0);
+   if (send_result < 0) {
+       ESP_LOGE(TAG, "Error occurred during sending. Error no.: %d", send_result);
        vTaskDelete(NULL);
    }
    ESP_LOGI(TAG, "Successfully connected");
@@ -663,7 +666,7 @@ static void uart_event_task(void *pvParameters) {
             // other types of events. If we take too much time on data event, the queue might be full.
             case UART_DATA:
                //ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
-               int read_bytes = uart_read_bytes(UART_NUM_0, dtmp, event.size, portMAX_DELAY);
+               uart_read_bytes(UART_NUM_0, dtmp, event.size, portMAX_DELAY);
                //ESP_LOGI(TAG, "[DATA EVT]:");
                break;
 
@@ -713,7 +716,7 @@ static void on_wifi_connected()
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
    repetitive_ap_connecting_errors_counter_g = 0;
 
-   if (xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG == 0) {
+   if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       send_status_info();
    }
 }
@@ -725,7 +728,6 @@ static void on_wifi_disconnected()
 
 static void blink_on_send(gpio_num_t pin) {
    int initial_pin_state = gpio_get_level(pin);
-   bool pin_state_changed_during_blinking = false;
    unsigned char i;
 
    for (i = 0; i < 4; i++) {

@@ -13,7 +13,7 @@ static void check_is_full(unsigned char current_amount) {
 }
 
 void *zalloc_logger(unsigned int element_size, unsigned int variable_line, unsigned int allocated_time) {
-   void *allocated_address = zalloc(element_size);
+   void *allocated_address = os_zalloc(element_size);
    unsigned char i;
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
@@ -30,7 +30,7 @@ void *zalloc_logger(unsigned int element_size, unsigned int variable_line, unsig
 }
 
 char *malloc_logger(unsigned int string_size, unsigned int variable_line, unsigned int allocated_time) {
-   char *allocated_string = malloc(string_size);
+   char *allocated_string = os_malloc(string_size);
    unsigned char i;
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
@@ -51,7 +51,7 @@ void free_logger(void *allocated_address_element_to_free) {
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address == allocated_address_element_to_free) {
-         free(allocated_address_element_to_free);
+         os_free(allocated_address_element_to_free);
          malloc_logger_list[i].allocated_element_address = NULL;
          malloc_logger_list[i].variable_line = 0;
          malloc_logger_list[i].allocated_time = 0;
