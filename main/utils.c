@@ -106,87 +106,6 @@ void *set_string_parameters(char string[], char *parameters[]) {
    return allocated_result;
 }
 
-static void calculate_rom_string_length_or_fill_malloc(unsigned short *string_length, char *result, const char *rom_string) {
-   unsigned char calculate_string_length = *string_length ? false : true;
-   unsigned short calculated_string_length = 0;
-   unsigned int *rom_string_aligned = (unsigned int*) (((unsigned int) (rom_string)) & ~3); // Could be saved in not 4 bytes aligned address
-   unsigned int rom_string_aligned_value = *rom_string_aligned;
-   unsigned char shifted_bytes = (unsigned char) ((unsigned int) (rom_string) - (unsigned int) (rom_string_aligned)); // 0 - 3
-   bool prematurely_stopped = false;
-
-   unsigned char shifted_bytes_tmp = shifted_bytes;
-   while (shifted_bytes_tmp < 4) {
-      unsigned int comparable = 0xFF;
-      unsigned char bytes_to_shift = shifted_bytes_tmp * 8;
-      comparable <<= bytes_to_shift;
-      unsigned int current_character_shifted = rom_string_aligned_value & comparable;
-
-      if (current_character_shifted == 0) {
-         prematurely_stopped = true;
-         break;
-      }
-      shifted_bytes_tmp++;
-
-      if (!calculate_string_length) {
-         char current_character = (char) (current_character_shifted >> bytes_to_shift);
-         *(result + calculated_string_length) = current_character;
-      }
-
-      calculated_string_length++;
-   }
-
-   if (!calculated_string_length) {
-      return;
-   }
-
-   unsigned int *rom_string_aligned_next = rom_string_aligned + 1;
-   while (prematurely_stopped == false && 1) {
-      unsigned int shifted_tmp = 0xFF;
-      unsigned int rom_string_aligned_tmp_value = *rom_string_aligned_next;
-      unsigned char stop = 0;
-
-      while (shifted_tmp) {
-         unsigned int current_character_shifted = rom_string_aligned_tmp_value & shifted_tmp;
-
-         if (current_character_shifted == 0) {
-            stop = 1;
-            break;
-         }
-
-         if (!calculate_string_length) {
-            unsigned char bytes_to_shift;
-
-            if (shifted_tmp == 0xFF) {
-               bytes_to_shift = 0;
-            } else if (shifted_tmp == 0xFF00) {
-               bytes_to_shift = 8;
-            } else if (shifted_tmp == 0xFF0000) {
-               bytes_to_shift = 16;
-            } else {
-               bytes_to_shift = 24;
-            }
-
-            char current_character = (char) (current_character_shifted >> bytes_to_shift);
-            *(result + calculated_string_length) = current_character;
-         }
-
-         calculated_string_length++;
-         shifted_tmp <<= 8;
-      }
-
-      if (stop) {
-         break;
-      }
-      rom_string_aligned_next++;
-   }
-
-   if (calculate_string_length) {
-      *string_length = calculated_string_length;
-   } else {
-      *(result + *string_length) = '\0';
-   }
-}
-
 bool compare_strings(char *string1, char *string2) {
    if (string1 == NULL || string2 == NULL) {
       return false;
@@ -207,33 +126,6 @@ bool compare_strings(char *string1, char *string2) {
       i++;
    }
    return result;
-}
-
-char *generate_reset_reason() {
-   struct rst_info *rst_info = system_get_rst_info();
-   char reason[2];
-   snprintf(reason, 2, "%u", rst_info->reason);
-   char cause[3];
-   snprintf(cause, 3, "%u", rst_info->exccause);
-   char epc_1[11];
-   snprintf(epc_1, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->epc1);
-   char epc_2[11];
-   snprintf(epc_2, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->epc2);
-   char epc_3[11];
-   snprintf(epc_3, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->epc3);
-   char excvaddr[11];
-   snprintf(excvaddr, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->excvaddr);
-   char depc[11];
-   snprintf(depc, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->depc);
-   char rtn_addr[11];
-   snprintf(rtn_addr, 11, HEXADECIMAL_ADDRESS_FORMAT, rst_info->rtn_addr);
-   char *used_software = system_upgrade_userbin_check() ? "user2.bin" : "user1.bin";
-
-   char *reset_reason_template = get_string_from_rom(RESET_REASON_TEMPLATE);
-   char *reset_reason_template_parameters[] = {reason, cause, epc_1, epc_2, epc_3, excvaddr, depc, rtn_addr, used_software, NULL};
-   char *reset_reason = set_string_parameters(reset_reason_template, reset_reason_template_parameters);
-   FREE(reset_reason_template);
-   return reset_reason;
 }
 
 static esp_err_t esp_event_handler(void *ctx, system_event_t *event, void (*on_connected)(),
