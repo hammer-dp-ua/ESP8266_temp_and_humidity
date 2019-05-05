@@ -1,3 +1,24 @@
+#include <stdio.h>
+#include "esp_system.h"
+
+#include "portmacro.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+#include "freertos/semphr.h"
+
+#include "driver/uart.h"
+#include "driver/gpio.h"
+
+#include "esp_wifi.h"
+#include "string.h"
+#include "utils.h"
+#include "lwip/sys.h"
+#include "lwip/inet.h"
+#include "sys/socket.h"
+#include "event_groups.h"
+#include "global_definitions.h"
+#include "malloc_logger.h"
+
 #ifndef MAIN_HEADER
 #define MAIN_HEADER
 
@@ -53,7 +74,7 @@ typedef enum {
 } SYSTEM_RESTART_REASON_TYPE;
 
 const char RESPONSE_SERVER_SENT_OK[] = "\"statusCode\":\"OK\"";
-const char STATUS_INFO_POST_REQUEST[] =
+char STATUS_INFO_POST_REQUEST[] =
       "POST /server/esp8266/statusInfo HTTP/1.1\r\n"
       "Content-Length: <1>\r\n"
       "Host: <2>\r\n"
@@ -62,7 +83,7 @@ const char STATUS_INFO_POST_REQUEST[] =
       "Connection: close\r\n"
       "Accept: application/json\r\n\r\n"
       "<3>\r\n";
-const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
+char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "{\"gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"

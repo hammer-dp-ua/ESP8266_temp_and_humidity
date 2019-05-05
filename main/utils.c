@@ -132,6 +132,22 @@ bool compare_strings(char *string1, char *string2) {
    return result;
 }
 
+char *put_flash_string_into_heap(const char *flash_string, unsigned int allocated_time) {
+   if (flash_string == NULL) {
+      return NULL;
+   }
+
+   unsigned short string_length = strlen(flash_string);
+
+   char *heap_string = MALLOC(string_length + 1, __LINE__, allocated_time);
+
+   for (unsigned short i = 0; i < string_length; i++) {
+      *(heap_string + i) = flash_string[i];
+   }
+   *(heap_string + string_length) = '\0';
+   return heap_string;
+}
+
 static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
    switch(event->event_id) {
       case SYSTEM_EVENT_STA_START:

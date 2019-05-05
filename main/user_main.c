@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include "esp_system.h"
-
 /**
  * Pins 4 and 5 on some ESP8266-07 are exchanged on silk screen!!!
  *
@@ -11,28 +8,6 @@
  *               (1) Data is valid on clock trailing edge
  */
 
-//#include "esp_common.h"
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-#include "freertos/semphr.h"
-
-// driver libs
-#include "driver/uart.h"
-#include "driver/gpio.h"
-
-//#include "esp_sta.h"
-#include "esp_wifi.h"
-#include "global_definitions.h"
-#include "malloc_logger.h"
-#include "device_settings.h"
-//#include "espconn.h"
-#include "string.h"
-#include "utils.h"
-#include "lwip/sys.h"
-#include "lwip/inet.h"
-#include "sys/socket.h"
-#include "event_groups.h"
 #include "user_main.h"
 
 unsigned int milliseconds_counter_g;
@@ -115,7 +90,7 @@ void scan_access_point_task(void *pvParameters) {
    unsigned short scanned_access_points_amount = 1;
    wifi_ap_record_t scanned_access_points[1];
 
-   scan_config.ssid = ACCESS_POINT_NAME;
+   scan_config.ssid = (unsigned char *) ACCESS_POINT_NAME;
    scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
 
    for (;;) {
@@ -364,23 +339,23 @@ void send_status_info_task(void *pvParameters) {
       itoa(rst_info, filled_reset_reason, 2);
       reset_reason = filled_reset_reason;
 
-      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type;
+      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
 
-      system_rtc_mem_read(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
+      //system_rtc_mem_read(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
 
       if (system_restart_reason_type == ACCESS_POINT_CONNECTION_ERROR) {
-         int connection_error_code;
+         int connection_error_code = 1;
          char system_restart_reason_inner[31];
 
-         system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
+         //system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
 
          snprintf(system_restart_reason_inner, 31, "AP connection error. Code: %d", connection_error_code);
          system_restart_reason = system_restart_reason_inner;
       } else if (system_restart_reason_type == REQUEST_CONNECTION_ERROR) {
-         int connection_error_code;
+         int connection_error_code = 1;
          char system_restart_reason_inner[25];
 
-         system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
+         //system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
 
          snprintf(system_restart_reason_inner, 25, "Request error. Code: %d", connection_error_code);
          system_restart_reason = system_restart_reason_inner;
@@ -389,8 +364,8 @@ void send_status_info_task(void *pvParameters) {
       }
 
       unsigned int overwrite_value = 0xFF;
-      system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &overwrite_value, 4);
-      system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &overwrite_value, 4);
+      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &overwrite_value, 4);
+      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &overwrite_value, 4);
    }
 
    char *status_info_request_payload_template_parameters[] =
@@ -785,8 +760,8 @@ void check_errors_amount() {
 
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
 
-      system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
-      system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code_g, 4);
+      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
+      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code_g, 4);
       restart = true;
    } else if (repetitive_ap_connecting_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
@@ -796,8 +771,8 @@ void check_errors_amount() {
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
       //STATION_STATUS status = wifi_station_get_connect_status();
 
-      system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
-      system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, 0xFFFF, 4);
+      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
+      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, 0xFFFF, 4);
       restart = true;
    }
 
@@ -806,7 +781,15 @@ void check_errors_amount() {
    }
 }
 
-void user_init(void) {
+void app_main(void) {
+   ESP_LOGI(TAG, "Address of RESPONSE_SERVER_SENT_OK string: %u", (unsigned int) RESPONSE_SERVER_SENT_OK);
+   ESP_LOGI(TAG, "Address of STATUS_INFO_POST_REQUEST string: %u", (unsigned int) STATUS_INFO_POST_REQUEST);
+
+   if (true)
+   {
+      return;
+   }
+
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
