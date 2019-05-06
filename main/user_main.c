@@ -291,7 +291,7 @@ void send_status_info_task(void *pvParameters) {
       ESP_LOGE(TAG, "Failed to allocate socket");
       vTaskDelete(NULL);
    }
-   ESP_LOGI(TAG, "Socket has been allocated");
+   ESP_LOGI(TAG, "Socket %d has been allocated", socket_result);
 
    struct sockaddr_in destination_address;
    destination_address.sin_addr.s_addr = inet_addr(SERVER_IP_ADDRESS);
@@ -305,18 +305,19 @@ void send_status_info_task(void *pvParameters) {
       close(socket_result);
       vTaskDelete(NULL);
    }
+   ESP_LOGE(TAG, "Socket %d has been connected", socket_result);
 
-   if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
+   /*if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       vTaskDelete(NULL);
-   }
+   }*/
 
    if (!is_connected_to_wifi()) {
+      ESP_LOGE(TAG, "Not connected to Wi-Fi. To be delete task.");
       vTaskDelete(NULL);
    }
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
-   char *device_name = DEVICE_NAME;
    char errors_counter[6];
    snprintf(errors_counter, 6, "%u", errors_counter_g);
    char pending_connection_errors_counter[4];
@@ -363,33 +364,29 @@ void send_status_info_task(void *pvParameters) {
          system_restart_reason = "Software upgrade";
       }
 
-      unsigned int overwrite_value = 0xFF;
+      //unsigned int overwrite_value = 0xFF;
       //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &overwrite_value, 4);
       //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &overwrite_value, 4);
    }
 
-   char *status_info_request_payload_template_parameters[] =
-         {signal_strength, device_name, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space, reset_reason, system_restart_reason, NULL};
-   char *status_info_request_payload_template = STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE;
-   char *request_payload = set_string_parameters(status_info_request_payload_template, status_info_request_payload_template_parameters);
+   const char *status_info_request_payload_template_parameters[] =
+         {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space, reset_reason, system_restart_reason, NULL};
+   char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
-   FREE(device_name);
-   FREE(status_info_request_payload_template);
+   ESP_LOGI(TAG, "Request payload: %s", request_payload);
+
    if (strlen(reset_reason) > 1) {
       FREE(reset_reason);
    }
 
-   char *request_template = STATUS_INFO_POST_REQUEST;
    unsigned short request_payload_length = strnlen(request_payload, 0xFFFF);
    char request_payload_length_string[6];
    snprintf(request_payload_length_string, 6, "%u", request_payload_length);
-   char *server_ip_address = SERVER_IP_ADDRESS;
-   char *request_template_parameters[] = {request_payload_length_string, server_ip_address, request_payload, NULL};
-   char *request = set_string_parameters(request_template, request_template_parameters);
+   const char *request_template_parameters[] = {request_payload_length_string, SERVER_IP_ADDRESS, request_payload, NULL};
+   char *request = set_string_parameters(STATUS_INFO_POST_REQUEST, request_template_parameters);
+   ESP_LOGI(TAG, "Created request: %s", request);
 
    FREE(request_payload);
-   FREE(request_template);
-   FREE(server_ip_address);
 
    /*struct connection_user_data *user_data =
          (struct connection_user_data *) ZALLOC(sizeof(struct connection_user_data), __LINE__, milliseconds_counter_g);
@@ -411,14 +408,16 @@ void send_status_info_task(void *pvParameters) {
    //espconn_regist_write_finish(&connection, tcp_request_successfully_written_into_buffer_handler_callback);
 
    int send_result = send(socket_result, request, strlen(request), 0);
+   FREE(request);
    if (send_result < 0) {
        ESP_LOGE(TAG, "Error occurred during sending. Error no.: %d", send_result);
        vTaskDelete(NULL);
    }
-   ESP_LOGI(TAG, "Successfully connected");
+   ESP_LOGI(TAG, "Request has been sent. Socket %d", socket_result);
 
-   char rx_buffer[128];
-   int len = recv(socket_result, rx_buffer, sizeof(rx_buffer) - 1, 0);
+   unsigned char buffer_size = 255;
+   char *rx_buffer = MALLOC(buffer_size, __LINE__, milliseconds_counter_g);
+   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
    if (len < 0) {
        ESP_LOGE(TAG, "Receive failed. Error no.: %d", len);
        vTaskDelete(NULL);
@@ -434,6 +433,7 @@ void send_status_info_task(void *pvParameters) {
       close(socket_result);
    }
 
+   FREE(rx_buffer);
    vTaskDelete(NULL);
 }
 
@@ -758,7 +758,7 @@ void check_errors_amount() {
       printf("\n Request errors amount: %u\n", repetitive_request_errors_counter_g);
       #endif
 
-      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
+      //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
 
       //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
       //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code_g, 4);
@@ -768,7 +768,7 @@ void check_errors_amount() {
       printf("\n AP connection errors amount: %u\n", repetitive_ap_connecting_errors_counter_g);
       #endif
 
-      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
+      //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
       //STATION_STATUS status = wifi_station_get_connect_status();
 
       //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
@@ -782,20 +782,20 @@ void check_errors_amount() {
 }
 
 void app_main(void) {
-   ESP_LOGI(TAG, "Address of RESPONSE_SERVER_SENT_OK string: %u", (unsigned int) RESPONSE_SERVER_SENT_OK);
-   ESP_LOGI(TAG, "Address of STATUS_INFO_POST_REQUEST string: %u", (unsigned int) STATUS_INFO_POST_REQUEST);
-
-   if (true)
-   {
-      return;
-   }
-
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
    uart_config();
 
    vTaskDelay(1000 / portTICK_RATE_MS);
+
+   tcpip_adapter_init();
+   tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Stop DHCP client
+   tcpip_adapter_ip_info_t ip_info;
+   ip_info.ip.addr = inet_addr(OWN_IP_ADDRESS);
+   ip_info.gw.addr = inet_addr(OWN_GETAWAY_ADDRESS);
+   ip_info.netmask.addr = inet_addr(OWN_NETMASK);
+   tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info);
 
    //ESP_LOGI(TAG, "Software is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
 
@@ -806,7 +806,7 @@ void app_main(void) {
    //os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
    //xTaskCreate(ap_connect_task, "ap_connect_task", 180, NULL, 1, NULL);
 
-   xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   //xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    //xTaskCreate(testing_task, "testing_task", 200, NULL, 1, NULL);
 

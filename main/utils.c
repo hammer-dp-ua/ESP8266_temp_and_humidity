@@ -19,7 +19,7 @@ static void (*on_wifi_connection)();
  *
  * *parameters - array of pointers to strings. The last parameter has to be NULL
  */
-void *set_string_parameters(char string[], char *parameters[]) {
+void *set_string_parameters(const char string[], const char *parameters[]) {
    unsigned char open_brace_found = 0;
    unsigned char parameters_amount = 0;
    unsigned short result_string_length = 0;
@@ -28,7 +28,7 @@ void *set_string_parameters(char string[], char *parameters[]) {
    }
 
    // Calculate the length without symbols to be replaced ('<x>')
-   char *string_pointer;
+   const char *string_pointer;
    for (string_pointer = string; *string_pointer != '\0'; string_pointer++) {
       if (*string_pointer == '<') {
          if (open_brace_found) {
@@ -62,7 +62,7 @@ void *set_string_parameters(char string[], char *parameters[]) {
    // 1 is for the last \0 character
    result_string_length++;
 
-   char *allocated_result = MALLOC(result_string_length, __LINE__, 0xFFFFFFFF); // (string_length + 1) * sizeof(char)
+   char *allocated_result = MALLOC(result_string_length, __LINE__, 0xFFFF); // (string_length + 1) * sizeof(char)
 
    if (allocated_result == NULL) {
       return NULL;
@@ -95,7 +95,7 @@ void *set_string_parameters(char string[], char *parameters[]) {
          input_string_index++;
 
          // Parameters are starting with 1
-         char *parameter = parameters[parameter_numeric_value - 1];
+         const char *parameter = parameters[parameter_numeric_value - 1];
 
          for (; *parameter != '\0'; parameter++, result_string_index++) {
             *(allocated_result + result_string_index) = *parameter;
@@ -155,17 +155,18 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          on_wifi_connection();
          break;
       case SYSTEM_EVENT_STA_GOT_IP:
-         ESP_LOGI(TAG, "got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+         ESP_LOGI(TAG, "Got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
          xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
          on_wifi_connected();
          break;
       case SYSTEM_EVENT_AP_STACONNECTED:
-         ESP_LOGI(TAG, "station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
+         ESP_LOGI(TAG, "Station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
          break;
       case SYSTEM_EVENT_AP_STADISCONNECTED:
-         ESP_LOGI(TAG, "station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
+         ESP_LOGI(TAG, "Station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
          break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
+         ESP_LOGI(TAG, "Disconnected from %s", ACCESS_POINT_NAME);
          on_wifi_disconnected();
          //esp_wifi_connect();
          on_wifi_connection();
@@ -184,7 +185,6 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
 
    wifi_event_group = xEventGroupCreate();
 
-   tcpip_adapter_init();
    ESP_ERROR_CHECK(esp_event_loop_init(esp_event_handler, NULL));
 
    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -198,7 +198,7 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
    ESP_ERROR_CHECK(esp_wifi_start());
 
-   ESP_LOGI(TAG, "set_default_wi_fi_settings finished");
+   ESP_LOGI(TAG, "wifi_init_sta finished");
 }
 
 bool is_connected_to_wifi()

@@ -7,12 +7,14 @@ static struct malloc_logger_element malloc_logger_list[MALLOC_LOGGER_LIST_SIZE];
 static void check_is_full(unsigned char current_amount) {
    #ifdef ALLOW_USE_PRINTF
    if (current_amount >= MALLOC_LOGGER_LIST_SIZE) {
-      printf("\n !malloc_logger_list is full\n");
+      ESP_LOGE(TAG, "\n Malloc_logger_list is full!\n");
    }
    #endif
 }
 
 void *zalloc_logger(unsigned int element_size, unsigned int variable_line, unsigned int allocated_time) {
+   ESP_LOGI(TAG, "%u length heap element is to be allocated. Code line: %u, time: %u", element_size, variable_line, allocated_time);
+
    void *allocated_address = os_zalloc(element_size);
    unsigned char i;
 
@@ -21,6 +23,9 @@ void *zalloc_logger(unsigned int element_size, unsigned int variable_line, unsig
          malloc_logger_list[i].allocated_element_address = allocated_address;
          malloc_logger_list[i].variable_line = variable_line;
          malloc_logger_list[i].allocated_time = allocated_time;
+
+         ESP_LOGI(TAG, "%u length heap has been allocated. Address: %u, code line: %u, time: %u, index in logger list: %u",
+                        (unsigned int) allocated_address, element_size, variable_line, allocated_time, i);
          break;
       }
    }
@@ -29,32 +34,44 @@ void *zalloc_logger(unsigned int element_size, unsigned int variable_line, unsig
    return allocated_address;
 }
 
-char *malloc_logger(unsigned int string_size, unsigned int variable_line, unsigned int allocated_time) {
-   char *allocated_string = os_malloc(string_size);
+char *malloc_logger(unsigned int element_size, unsigned int variable_line, unsigned int allocated_time) {
+   ESP_LOGI(TAG, "%u length heap element is to be allocated. Code line: %u, time: %u", element_size, variable_line, allocated_time);
+
+   char *allocated_element = os_malloc(element_size);
    unsigned char i;
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address == NULL) {
-         malloc_logger_list[i].allocated_element_address = allocated_string;
+         malloc_logger_list[i].allocated_element_address = allocated_element;
          malloc_logger_list[i].variable_line = variable_line;
          malloc_logger_list[i].allocated_time = allocated_time;
+
+         ESP_LOGI(TAG, "%u length heap has been allocated. Address: %u, code line: %u, time: %u, index in logger list: %u",
+               (unsigned int) allocated_element, element_size, variable_line, allocated_time, i);
          break;
       }
    }
 
    check_is_full(i);
-   return allocated_string;
+   return allocated_element;
 }
 
 void free_logger(void *allocated_address_element_to_free) {
+   ESP_LOGI(TAG, "Element is to be removed from heap. Address: %u", (unsigned int) allocated_address_element_to_free);
+
    unsigned char i;
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address == allocated_address_element_to_free) {
+         ESP_LOGI(TAG, "%u element has been found in logger list", (unsigned int) allocated_address_element_to_free);
+
          os_free(allocated_address_element_to_free);
          malloc_logger_list[i].allocated_element_address = NULL;
          malloc_logger_list[i].variable_line = 0;
          malloc_logger_list[i].allocated_time = 0;
+
+         ESP_LOGI(TAG, "%u element has been removed from heap. Index in logger list: %u",
+               (unsigned int) allocated_address_element_to_free, i);
          break;
       }
    }
@@ -90,7 +107,7 @@ void print_not_empty_elements_lines() {
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address != NULL) {
-         printf(" element's variable line: %u, allocated time: %u\n",
+         ESP_LOGI(TAG, " element's variable line: %u, allocated time: %u\n",
                malloc_logger_list[i].variable_line, malloc_logger_list[i].allocated_time);
       }
    }

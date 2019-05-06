@@ -5,7 +5,9 @@
 			<provider id="org.eclipse.cdt.managedbuilder.core.GCCBuildCommandParser">
 				<language id="org.eclipse.cdt.core.gcc">
 					<resource project-relative-path="main/malloc_logger.c">
-						<entry kind="includePath" name="/z/USER/workspace/ESP8266_temp_and_humidity/main/include"/>
+						<entry kind="includePath" name="/${ProjName}/main/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
 						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
@@ -82,7 +84,9 @@
 						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
 					</resource>
 					<resource project-relative-path="main/user_main.c">
-						<entry kind="includePath" name="/z/USER/workspace/ESP8266_temp_and_humidity/main/include"/>
+						<entry kind="includePath" name="/${ProjName}/main/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
 						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
@@ -159,7 +163,9 @@
 						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
 					</resource>
 					<resource project-relative-path="main/utils.c">
-						<entry kind="includePath" name="/z/USER/workspace/ESP8266_temp_and_humidity/main/include"/>
+						<entry kind="includePath" name="/${ProjName}/main/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
 						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>

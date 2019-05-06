@@ -1,3 +1,2 @@
 //#define ALLOW_USE_PRINTF
-
-
+#define USE_MALLOC_LOGGER

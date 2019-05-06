@@ -87,10 +87,12 @@ char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "{\"gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"
-      "\"uptime\":<4>,"
-      "\"buildTimestamp\":\"<5>\","
-      "\"freeHeapSpace\":<6>,"
-      "\"resetReason\":\"<7>\"}";
+      "\"pendingConnectionErrors\":<4>,"
+      "\"uptime\":<5>,"
+      "\"buildTimestamp\":\"<6>\","
+      "\"freeHeapSpace\":<7>,"
+      "\"resetReason\":\"<8>\","
+      "\"systemRestartReason\":\"<9>\"}";
 const char ALARM_GET_REQUEST[] =
       "GET /server/esp8266/alarm?alarmSource=<1> HTTP/1.1\r\n"
       "Host: <2>\r\n"
