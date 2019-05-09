@@ -22,5 +22,4 @@ char *put_flash_string_into_heap(const char *flash_string, unsigned int allocate
 char *generate_reset_reason();
 void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_connection)());
 bool is_connected_to_wifi();
-
 #endif

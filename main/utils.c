@@ -219,3 +219,16 @@ bool is_connected_to_wifi()
 {
    return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) == WIFI_CONNECTED_BIT;
 }
+
+/*
+ * Added into SDK's esp_system_internal.h:
+ * uint32_t get_reset_reason_custom();
+ *
+ * Added into SDK's reset_reason.c:
+   uint32_t get_reset_reason_custom()
+   {
+      const uint32_t hw_reset = esp_rtc_get_reset_reason();
+      const uint32_t hint = esp_reset_reason_get_hint(hw_reset);
+      return get_reset_reason(hw_reset, hint);
+   }
+ */

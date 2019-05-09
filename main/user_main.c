@@ -231,79 +231,6 @@ void check_for_update_firmware(char *response) {
    FREE(update);
 }*/
 
-/*void establish_connection(struct espconn *connection) {
-   if (connection == NULL) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("\n Create connection first\n");
-      #endif
-
-      return;
-   }
-   xTaskCreate(blink_on_send_task, "blink_on_send_task", 180, (void *) SERVER_AVAILABILITY_STATUS_LED_PIN_TYPE, 1, NULL);
-
-   int connection_status = espconn_connect(connection);
-
-   #ifdef ALLOW_USE_PRINTF
-   printf("\n Connection status: ");
-   #endif
-
-   switch (connection_status) {
-      case ESPCONN_OK:
-      {
-         struct connection_user_data *user_data = connection->reserve;
-
-         if (user_data != NULL) {
-            xTaskHandle created_supervisor_task;
-            xTaskCreate(timeout_request_supervisor_task, "timeout_request_supervisor_task", 256, connection, 1, &created_supervisor_task);
-            user_data->timeout_request_supervisor_task = created_supervisor_task;
-         }
-
-         #ifdef ALLOW_USE_PRINTF
-         printf("Connected");
-         #endif
-
-         break;
-      }
-      case ESPCONN_RTE:
-         #ifdef ALLOW_USE_PRINTF
-         printf("Routing problem");
-         #endif
-
-         break;
-      case ESPCONN_MEM:
-         #ifdef ALLOW_USE_PRINTF
-         printf("Out of memory");
-         #endif
-
-         break;
-      case ESPCONN_ISCONN:
-         #ifdef ALLOW_USE_PRINTF
-         printf("Already connected");
-         #endif
-
-         break;
-      case ESPCONN_ARG:
-         #ifdef ALLOW_USE_PRINTF
-         printf("Illegal argument");
-         #endif
-
-         break;
-   }
-   #ifdef ALLOW_USE_PRINTF
-   printf(". Time: %u\n", milliseconds_counter_g);
-   #endif
-
-   if (connection_status != ESPCONN_OK) {
-      struct connection_user_data *user_data = connection->reserve;
-
-      connection_error_code_g = connection_status;
-
-      if (user_data != NULL && user_data->execute_on_error != NULL) {
-         user_data->execute_on_error(connection);
-      }
-   }
-}*/
-
 char *sent_request(char *request) {
    int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
 
@@ -416,9 +343,42 @@ void send_status_info_task(void *pvParameters) {
       build_timestamp = build_timestamp_filled;
 
       esp_reset_reason_t rst_info = esp_reset_reason();
-      char filled_reset_reason[2];
-      itoa(rst_info, filled_reset_reason, 2);
-      reset_reason = filled_reset_reason;
+
+      switch(rst_info) {
+         case ESP_RST_UNKNOWN:
+            reset_reason = "Unknown";
+            break;
+         case ESP_RST_POWERON:
+            reset_reason = "Power on";
+            break;
+         case ESP_RST_EXT:
+            reset_reason = "Reset by external pin";
+            break;
+         case ESP_RST_SW:
+            reset_reason = "Software";
+            break;
+         case ESP_RST_PANIC:
+            reset_reason = "Exception/panic";
+            break;
+         case ESP_RST_INT_WDT:
+            reset_reason = "Watchdog";
+            break;
+         case ESP_RST_TASK_WDT:
+            reset_reason = "Task watchdog";
+            break;
+         case ESP_RST_WDT:
+            reset_reason = "Other watchdog";
+            break;
+         case ESP_RST_DEEPSLEEP:
+            reset_reason = "Deep sleep";
+            break;
+         case ESP_RST_BROWNOUT:
+            reset_reason = "Brownout";
+            break;
+         case ESP_RST_SDIO:
+            reset_reason = "SDIO";
+            break;
+      }
 
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
 
@@ -486,175 +446,6 @@ void schedule_sending_status_info(unsigned int timeout_ms) {
    os_timer_setfn(&status_sender_timer_g, (os_timer_func_t *) send_status_info, NULL);
    os_timer_arm(&status_sender_timer_g, timeout_ms, false);
 }
-
-/*void send_general_request(struct request_data *request_data_param, unsigned char task_priority) {
-   if (read_flag(general_flags, UPDATE_FIRMWARE_FLAG)) {
-      if (request_data_param->ms != NULL) {
-         FREE(request_data_param->ms->alarm_source);
-         FREE(request_data_param->ms);
-      }
-      FREE(request_data_param);
-      return;
-   }
-
-   if ((request_data_param->request_type == FALSE_ALARM || request_data_param->request_type == ALARM) &&
-         is_alarm_being_ignored(request_data_param->ms, request_data_param->request_type)) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("\n %s alarm is being ignored. Time: %u\n", request_data_param->ms->alarm_source, milliseconds_counter_g);
-      #endif
-
-      FREE(request_data_param->ms->alarm_source);
-      FREE(request_data_param->ms);
-      FREE(request_data_param);
-      return;
-   }
-
-   if (request_data_param->request_type == IMMOBILIZER_ACTIVATION) {
-      if (read_flag(general_flags, IGNORE_IMMOBILIZER_FLAG)) {
-         FREE(request_data_param);
-
-         #ifdef ALLOW_USE_PRINTF
-         printf(" Immobilizer is being ignored. Time: %u\n", milliseconds_counter_g);
-         #endif
-
-         return;
-      }
-
-      if (!read_flag(general_flags, IGNORE_IMMOBILIZER_BEEPER_FLAG)) {
-         xTaskCreate(beep_task, "beep_task", 200, NULL, 1, NULL);
-      }
-      set_flag(&general_flags, IGNORE_IMMOBILIZER_BEEPER_FLAG);
-      os_timer_disarm(&immobilizer_beeper_ignore_timer_g);
-      os_timer_setfn(&immobilizer_beeper_ignore_timer_g, (os_timer_func_t *) stop_ignoring_immobilizer_beeper, NULL);
-      os_timer_arm(&immobilizer_beeper_ignore_timer_g, IGNORE_IMMOBILIZER_BEEPER_SEC * 1000, false);
-
-      set_flag(&general_flags, IGNORE_IMMOBILIZER_FLAG);
-      os_timer_disarm(&immobilizer_ignore_timer_g);
-      os_timer_setfn(&immobilizer_ignore_timer_g, (os_timer_func_t *) stop_ignoring_immobilizer, NULL);
-      os_timer_arm(&immobilizer_ignore_timer_g, IGNORE_IMMOBILIZER_SEC * 1000, false);
-   }
-
-   xTaskCreate(send_general_request_task, "send_general_request_task", 256, request_data_param, task_priority, NULL);
-}*/
-
-/*void send_general_request_task(void *pvParameters) {
-   #ifdef ALLOW_USE_PRINTF
-   printf("\n send_general_request_task has been created. Time: %u\n", milliseconds_counter_g);
-   #endif
-
-   struct request_data *request_data_param = pvParameters;
-
-   if (request_data_param->request_type == ALARM) {
-      ignore_alarm(request_data_param->ms, IGNORE_ALARMS_TIMEOUT_SEC * 1000);
-   } else if (request_data_param->request_type == FALSE_ALARM) {
-      vTaskDelay((IGNORE_FALSE_ALARMS_TIMEOUT_SEC * 1000 + 500) / portTICK_RATE_MS);
-
-      if (is_alarm_being_ignored(request_data_param->ms, request_data_param->request_type)) {
-         #ifdef ALLOW_USE_PRINTF
-         printf("\n %s is being ignored after timeout. Time: %u\n", request_data_param->ms->alarm_source, milliseconds_counter_g);
-         #endif
-
-         // Alarm occurred after false alarm within interval
-         FREE(request_data_param->ms->alarm_source);
-         FREE(request_data_param->ms);
-         FREE(request_data_param);
-         vTaskDelete(NULL);
-      }
-
-      ignore_alarm(request_data_param->ms, IGNORE_FALSE_ALARMS_TIMEOUT_SEC * 1000);
-   }
-
-   GeneralRequestType request_type = request_data_param->request_type;
-   unsigned char alarm_source_length = (request_type == ALARM || request_type == FALSE_ALARM) ? (strlen(request_data_param->ms->alarm_source) + 1) : 0;
-   char alarm_source[alarm_source_length];
-
-   if (alarm_source_length > 0) {
-      memcpy(alarm_source, request_data_param->ms->alarm_source, alarm_source_length);
-   }
-
-   FREE(request_data_param);
-
-   for (;;) {
-      xSemaphoreTake(requests_binary_semaphore_g, portMAX_DELAY);
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\n send_general_request_task started. Time: %u\n", milliseconds_counter_g);
-      #endif
-
-      if (!read_flag(general_flags, CONNECTED_TO_AP_FLAG)) {
-         #ifdef ALLOW_USE_PRINTF
-         printf("\n Can't send alarm request, because not connected to AP. Time: %u\n", milliseconds_counter_g);
-         #endif
-
-         vTaskDelay(2000 / portTICK_RATE_MS);
-         continue;
-      }
-
-      if (read_flag(general_flags, REQUEST_ERROR_OCCURRED_FLAG)) {
-         reset_flag(&general_flags, REQUEST_ERROR_OCCURRED_FLAG);
-
-         vTaskDelay(REQUEST_IDLE_TIME_ON_ERROR);
-      }
-
-      char *server_ip_address = get_string_from_rom(SERVER_IP_ADDRESS);
-      char *request_template;
-      char *request;
-
-      if (request_type == ALARM) {
-         request_template = get_string_from_rom(ALARM_GET_REQUEST);
-         char *request_template_parameters[] = {alarm_source, server_ip_address, NULL};
-         request = set_string_parameters(request_template, request_template_parameters);
-      } else if (request_type == FALSE_ALARM) {
-         request_template = get_string_from_rom(FALSE_ALARM_GET_REQUEST);
-         char *request_template_parameters[] = {alarm_source, server_ip_address, NULL};
-         request = set_string_parameters(request_template, request_template_parameters);
-      } else if (request_type == IMMOBILIZER_ACTIVATION) {
-         request_template = get_string_from_rom(IMMOBILIZER_ACTIVATION_REQUEST);
-         char *request_template_parameters[] = {server_ip_address, NULL};
-         request = set_string_parameters(request_template, request_template_parameters);
-      }
-
-      FREE(request_template);
-      FREE(server_ip_address);
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\n Request created:\n<<<\n%s>>>\n", request);
-      #endif
-
-      struct espconn *connection = (struct espconn *) ZALLOC(sizeof(struct espconn), __LINE__, milliseconds_counter_g);
-      struct connection_user_data *user_data =
-            (struct connection_user_data *) ZALLOC(sizeof(struct connection_user_data), __LINE__, milliseconds_counter_g);
-
-      user_data->response_received = false;
-      user_data->timeout_request_supervisor_task = NULL;
-      user_data->request = request;
-      user_data->response = NULL;
-      user_data->execute_on_disconnect = general_request_on_disconnect_callback;
-      user_data->execute_on_error = general_request_on_error_callback;
-      user_data->parent_task = xTaskGetCurrentTaskHandle();
-      user_data->request_max_duration_time = REQUEST_MAX_DURATION_TIME;
-      connection->reserve = user_data;
-      connection->type = ESPCONN_TCP;
-      connection->state = ESPCONN_NONE;
-
-      // remote IP of TCP server
-      unsigned char tcp_server_ip[] = {SERVER_IP_ADDRESS_1, SERVER_IP_ADDRESS_2, SERVER_IP_ADDRESS_3, SERVER_IP_ADDRESS_4};
-
-      connection->proto.tcp = &user_tcp;
-      memcpy(&connection->proto.tcp->remote_ip, tcp_server_ip, 4);
-      connection->proto.tcp->remote_port = SERVER_PORT;
-      connection->proto.tcp->local_port = espconn_port(); // local port of ESP8266
-
-      espconn_regist_connectcb(connection, successfull_connected_tcp_handler_callback);
-      espconn_regist_disconcb(connection, successfull_disconnected_tcp_handler_callback);
-      espconn_regist_reconcb(connection, tcp_connection_error_handler_callback);
-      espconn_regist_sentcb(connection, tcp_request_successfully_sent_handler_callback);
-      espconn_regist_recvcb(connection, tcp_response_received_handler_callback);
-      //espconn_regist_write_finish(&connection, tcp_request_successfully_written_into_buffer_handler_callback);
-
-      establish_connection(connection);
-   }
-}*/
 
 void pins_config() {
    gpio_config_t output_pins;

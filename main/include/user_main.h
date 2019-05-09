@@ -9,6 +9,8 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
+#include "esp8266/rtc_register.h"
+#include "internal/esp_system_internal.h"
 #include "esp_wifi.h"
 #include "string.h"
 #include "utils.h"
