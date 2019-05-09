@@ -10,6 +10,24 @@
 
 #include "user_main.h"
 
+#ifdef ALLOW_USE_PRINTF
+static const char REMAINING_STACK_SIZE_MSG[] = "\nRemaining stack size was %u bytes. Code line: %u\n";
+static const char REQUEST_ERRORS_AMOUNT_MSG[] = "\nRequest errors amount: %u\n";
+static const char CONNECTION_ERRORS_AMOUNT_MSG[] = "\nAP connection errors amount: %u\n";
+static const char AP_SIGNAL_STRENGTH_MSG[] = "\nSignal strength of AP: %d\n";
+static const char FAILED_TO_ALLOCATE_SOCKET_MSG[] = "\nFailed to allocate socket\n";
+static const char ALLOCATED_SOCKET_MSG[] = "\nSocket %d has been allocated\n";
+static const char SOCKET_CONNECTION_ERROR_MSG[] = "\nSocket connection failed. Error: %d\n";
+static const char SOCKET_CONNECTED_ERROR_MSG[] = "\nSocket %d has been connected\n";
+static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To be deleted task\n";
+static const char REQUEST_PAYLOAD_CONTENT_MSG[] = "\nRequest payload: %s\n";
+static const char CREATED_REQUEST_CONTENT_MSG[] = "\nCreated request: %s\n";
+static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
+static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
+static const char ERROR_ON_RECEIVE_RESPONSE_MSG[] = "\nReceive failed. Error no.: %d\n";
+static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...";
+#endif
+
 unsigned int milliseconds_counter_g;
 int signal_strength_g;
 unsigned short errors_counter_g;
@@ -98,7 +116,9 @@ void scan_access_point_task(void *pvParameters) {
             esp_wifi_scan_get_ap_records(&scanned_access_points_amount, scanned_access_points) == ESP_OK) {
          signal_strength_g = scanned_access_points[0].rssi;
 
-         ESP_LOGI(TAG, "Signal strength of AP: %d", signal_strength_g);
+         #ifdef ALLOW_USE_PRINTF
+         printf(AP_SIGNAL_STRENGTH_MSG, signal_strength_g);
+         #endif
 
          vTaskDelay(rescan_when_connected_task_delay);
       } else {
@@ -284,14 +304,19 @@ void check_for_update_firmware(char *response) {
    }
 }*/
 
-void send_status_info_task(void *pvParameters) {
+char *sent_request(char *request) {
    int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
 
    if(socket_result < 0) {
-      ESP_LOGE(TAG, "Failed to allocate socket");
-      vTaskDelete(NULL);
+      #ifdef ALLOW_USE_PRINTF
+      printf(FAILED_TO_ALLOCATE_SOCKET_MSG);
+      #endif
+
+      return NULL;
    }
-   ESP_LOGI(TAG, "Socket %d has been allocated", socket_result);
+   #ifdef ALLOW_USE_PRINTF
+   printf(ALLOCATED_SOCKET_MSG, socket_result);
+   #endif
 
    struct sockaddr_in destination_address;
    destination_address.sin_addr.s_addr = inet_addr(SERVER_IP_ADDRESS);
@@ -301,20 +326,75 @@ void send_status_info_task(void *pvParameters) {
    int connection_result = connect(socket_result, (struct sockaddr *) &destination_address, sizeof(destination_address));
 
    if(connection_result != 0) {
-      ESP_LOGE(TAG, "Socket connection failed. Error: %d", connection_result);
-      close(socket_result);
-      vTaskDelete(NULL);
-   }
-   ESP_LOGE(TAG, "Socket %d has been connected", socket_result);
+      #ifdef ALLOW_USE_PRINTF
+      printf(SOCKET_CONNECTION_ERROR_MSG, connection_result);
+      #endif
 
+      close(socket_result);
+      return NULL;
+   }
+
+   #ifdef ALLOW_USE_PRINTF
+   printf(SOCKET_CONNECTED_ERROR_MSG, socket_result);
+   #endif
+
+   if (!is_connected_to_wifi()) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(NOT_CONNECTED_TO_WI_FI_MSG);
+      #endif
+
+      return NULL;
+   }
+
+   int send_result = send(socket_result, request, strlen(request), 0);
+
+   if (send_result < 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
+      #endif
+
+      return NULL;
+   }
+   #ifdef ALLOW_USE_PRINTF
+   printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
+   #endif
+
+   unsigned char buffer_size = 255;
+   char *rx_buffer = MALLOC(buffer_size, __LINE__, milliseconds_counter_g);
+   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
+
+   if (len < 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
+      #endif
+
+      FREE(rx_buffer, __LINE__);
+      return NULL;
+   } else {
+      rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nReceived %d bytes\n", len);
+      printf("\nResponse: %s\n", rx_buffer);
+      #endif
+   }
+
+   if (socket_result != -1) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(SHUTTING_DOWN_SOCKET_MSG);
+      #endif
+
+      shutdown(socket_result, 0);
+      close(socket_result);
+   }
+
+   return rx_buffer;
+}
+
+void send_status_info_task(void *pvParameters) {
    /*if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       vTaskDelete(NULL);
    }*/
-
-   if (!is_connected_to_wifi()) {
-      ESP_LOGE(TAG, "Not connected to Wi-Fi. To be delete task.");
-      vTaskDelete(NULL);
-   }
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
@@ -373,72 +453,32 @@ void send_status_info_task(void *pvParameters) {
          {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space, reset_reason, system_restart_reason, NULL};
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
-   ESP_LOGI(TAG, "Request payload: %s", request_payload);
-
-   if (strlen(reset_reason) > 1) {
-      FREE(reset_reason);
-   }
+   #ifdef ALLOW_USE_PRINTF
+   printf(REQUEST_PAYLOAD_CONTENT_MSG, request_payload);
+   #endif
 
    unsigned short request_payload_length = strnlen(request_payload, 0xFFFF);
    char request_payload_length_string[6];
    snprintf(request_payload_length_string, 6, "%u", request_payload_length);
    const char *request_template_parameters[] = {request_payload_length_string, SERVER_IP_ADDRESS, request_payload, NULL};
    char *request = set_string_parameters(STATUS_INFO_POST_REQUEST, request_template_parameters);
-   ESP_LOGI(TAG, "Created request: %s", request);
 
-   FREE(request_payload);
+   #ifdef ALLOW_USE_PRINTF
+   printf(CREATED_REQUEST_CONTENT_MSG, request);
+   #endif
 
-   /*struct connection_user_data *user_data =
-         (struct connection_user_data *) ZALLOC(sizeof(struct connection_user_data), __LINE__, milliseconds_counter_g);
+   FREE(request_payload, __LINE__);
 
-   user_data->response_received = false;
-   user_data->timeout_request_supervisor_task = NULL;
-   user_data->request = request;
-   user_data->response = NULL;
-   user_data->execute_on_disconnect = status_request_on_disconnect_callback;
-   user_data->execute_on_error = status_request_on_error_callback;
-   user_data->parent_task = NULL;
-   user_data->request_max_duration_time = REQUEST_MAX_DURATION_TIME;*/
+   sent_request(request);
 
-   /*espconn_regist_connectcb(connection, successfull_connected_tcp_handler_callback);
-   espconn_regist_disconcb(connection, successfull_disconnected_tcp_handler_callback);
-   espconn_regist_reconcb(connection, tcp_connection_error_handler_callback);
-   espconn_regist_sentcb(connection, tcp_request_successfully_sent_handler_callback);
-   espconn_regist_recvcb(connection, tcp_response_received_handler_callback);*/
-   //espconn_regist_write_finish(&connection, tcp_request_successfully_written_into_buffer_handler_callback);
+   FREE(request, __LINE__);
 
-   int send_result = send(socket_result, request, strlen(request), 0);
-   FREE(request);
-   if (send_result < 0) {
-       ESP_LOGE(TAG, "Error occurred during sending. Error no.: %d", send_result);
-       vTaskDelete(NULL);
-   }
-   ESP_LOGI(TAG, "Request has been sent. Socket %d", socket_result);
 
-   unsigned char buffer_size = 255;
-   char *rx_buffer = MALLOC(buffer_size, __LINE__, milliseconds_counter_g);
-   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
-   if (len < 0) {
-       ESP_LOGE(TAG, "Receive failed. Error no.: %d", len);
-       vTaskDelete(NULL);
-   } else {
-       rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-       ESP_LOGI(TAG, "Received %d bytes", len);
-       ESP_LOGI(TAG, "%s", rx_buffer);
-   }
-
-   if (socket_result != -1) {
-      ESP_LOGE(TAG, "Shutting down socket and restarting...");
-      shutdown(socket_result, 0);
-      close(socket_result);
-   }
-
-   FREE(rx_buffer);
    vTaskDelete(NULL);
 }
 
 void send_status_info() {
-   xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE * 3, NULL, 1, NULL);
+   xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
 void schedule_sending_status_info(unsigned int timeout_ms) {
@@ -627,12 +667,16 @@ void pins_config() {
 
 static void uart_event_task(void *pvParameters) {
    uart_event_t event;
-   uint8_t *dtmp = (uint8_t *) malloc(UART_RD_BUF_SIZE);
+   unsigned char *dtmp = (unsigned char *) ZALLOC(UART_RD_BUF_SIZE, __LINE__, milliseconds_counter_g);
 
    for (;;) {
+      #ifdef MONITOR_STACK_SIZE
+      unsigned int stack_size = (unsigned int) uxTaskGetStackHighWaterMark(NULL);
+      printf(REMAINING_STACK_SIZE_MSG, stack_size * 4, __LINE__);
+      #endif
+
       // Waiting for UART event.
       if (xQueueReceive(uart0_queue, (void *) &event, (portTickType) portMAX_DELAY)) {
-         bzero(dtmp, UART_RD_BUF_SIZE);
          //ESP_LOGI(TAG, "uart[%d] event:", EX_UART_NUM);
 
          switch (event.type) {
@@ -681,7 +725,7 @@ static void uart_event_task(void *pvParameters) {
       }
    }
 
-   free(dtmp);
+   FREE(dtmp, __LINE__);
    dtmp = NULL;
    vTaskDelete(NULL);
 }
@@ -744,7 +788,7 @@ static void uart_config() {
    uart_param_config(UART_NUM_0, &uart_config);
 
    uart_driver_install(UART_NUM_0, UART_BUF_SIZE, 0, 10, &uart0_queue);
-   xTaskCreate(uart_event_task, "uart_event_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   xTaskCreate(uart_event_task, "uart_event_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
 /**
@@ -755,7 +799,7 @@ void check_errors_amount() {
 
    if (repetitive_request_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
-      printf("\n Request errors amount: %u\n", repetitive_request_errors_counter_g);
+      printf(REQUEST_ERRORS_AMOUNT_MSG, repetitive_request_errors_counter_g);
       #endif
 
       //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
@@ -765,7 +809,7 @@ void check_errors_amount() {
       restart = true;
    } else if (repetitive_ap_connecting_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
-      printf("\n AP connection errors amount: %u\n", repetitive_ap_connecting_errors_counter_g);
+      printf(CONNECTION_ERRORS_AMOUNT_MSG, repetitive_ap_connecting_errors_counter_g);
       #endif
 
       //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;

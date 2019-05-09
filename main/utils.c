@@ -155,18 +155,30 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          on_wifi_connection();
          break;
       case SYSTEM_EVENT_STA_GOT_IP:
-         ESP_LOGI(TAG, "Got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+         #ifdef ALLOW_USE_PRINTF
+         printf("Got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+         #endif
+
          xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
          on_wifi_connected();
          break;
       case SYSTEM_EVENT_AP_STACONNECTED:
-         ESP_LOGI(TAG, "Station: "MACSTR" join, AID=%d", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nStation: "MACSTR" join, AID=%d\n", MAC2STR(event->event_info.sta_connected.mac), event->event_info.sta_connected.aid);
+         #endif
+
          break;
       case SYSTEM_EVENT_AP_STADISCONNECTED:
-         ESP_LOGI(TAG, "Station: "MACSTR" leave, AID=%d", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nStation: "MACSTR" leave, AID=%d\n", MAC2STR(event->event_info.sta_disconnected.mac), event->event_info.sta_disconnected.aid);
+         #endif
+
          break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
-         ESP_LOGI(TAG, "Disconnected from %s", ACCESS_POINT_NAME);
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nDisconnected from %s\n", ACCESS_POINT_NAME);
+         #endif
+
          on_wifi_disconnected();
          //esp_wifi_connect();
          on_wifi_connection();
@@ -198,7 +210,9 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
    ESP_ERROR_CHECK(esp_wifi_start());
 
-   ESP_LOGI(TAG, "wifi_init_sta finished");
+   #ifdef ALLOW_USE_PRINTF
+   printf("\nwifi_init_sta finished\n");
+   #endif
 }
 
 bool is_connected_to_wifi()

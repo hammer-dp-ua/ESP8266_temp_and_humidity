@@ -136,6 +136,7 @@ void recheck_false_alarm_callback();
 void disconnect_connection_task(void *pvParameters);
 void schedule_sending_status_info();
 bool check_to_continue();
+char *sent_request(char *request);
 
 #endif
 
