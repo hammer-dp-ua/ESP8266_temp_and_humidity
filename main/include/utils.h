@@ -12,6 +12,9 @@
 #include "event_groups.h"
 #include "string.h"
 #include "lwip/ip4_addr.h"
+#include "lwip/sys.h"
+#include "lwip/inet.h"
+#include "sys/socket.h"
 
 #define HEXADECIMAL_ADDRESS_FORMAT "%08x"
 
@@ -22,4 +25,7 @@ char *put_flash_string_into_heap(const char *flash_string, unsigned int allocate
 char *generate_reset_reason();
 void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_connection)());
 bool is_connected_to_wifi();
+bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length);
+bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length);
+char *send_request(char *request, unsigned int invocation_time);
 #endif

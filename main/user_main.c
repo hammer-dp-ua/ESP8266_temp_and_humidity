@@ -15,17 +15,8 @@ static const char REMAINING_STACK_SIZE_MSG[] = "\nRemaining stack size was %u by
 static const char REQUEST_ERRORS_AMOUNT_MSG[] = "\nRequest errors amount: %u\n";
 static const char CONNECTION_ERRORS_AMOUNT_MSG[] = "\nAP connection errors amount: %u\n";
 static const char AP_SIGNAL_STRENGTH_MSG[] = "\nSignal strength of AP: %d\n";
-static const char FAILED_TO_ALLOCATE_SOCKET_MSG[] = "\nFailed to allocate socket\n";
-static const char ALLOCATED_SOCKET_MSG[] = "\nSocket %d has been allocated\n";
-static const char SOCKET_CONNECTION_ERROR_MSG[] = "\nSocket connection failed. Error: %d\n";
-static const char SOCKET_CONNECTED_ERROR_MSG[] = "\nSocket %d has been connected\n";
-static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To be deleted task\n";
 static const char REQUEST_PAYLOAD_CONTENT_MSG[] = "\nRequest payload: %s\n";
 static const char CREATED_REQUEST_CONTENT_MSG[] = "\nCreated request: %s\n";
-static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
-static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
-static const char ERROR_ON_RECEIVE_RESPONSE_MSG[] = "\nReceive failed. Error no.: %d\n";
-static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...";
 #endif
 
 unsigned int milliseconds_counter_g;
@@ -127,27 +118,6 @@ void scan_access_point_task(void *pvParameters) {
    }
 }
 
-/*void timeout_request_supervisor_task(void *pvParameters) {
-   struct espconn *connection = pvParameters;
-   struct connection_user_data *user_data = connection->reserve;
-
-   vTaskDelay(user_data->request_max_duration_time);
-
-   #ifdef ALLOW_USE_PRINTF
-   printf("\n Request timeout. Time: %u\n", milliseconds_counter_g);
-   #endif
-
-   // To not delete this task in other functions
-   user_data->timeout_request_supervisor_task = NULL;
-
-   void (*execute_on_error)(struct espconn *connection) = user_data->execute_on_error;
-   if (execute_on_error != NULL) {
-      execute_on_error(connection);
-   }
-
-   vTaskDelete(NULL);
-}*/
-
 void blink_leds_while_updating_task(void *pvParameters) {
    for (;;) {
       if (gpio_get_level(AP_CONNECTION_STATUS_LED_PIN)) {
@@ -214,7 +184,7 @@ void check_for_update_firmware(char *response) {
       #endif
 
       SYSTEM_RESTART_REASON_TYPE reason = SOFTWARE_UPGRADE;
-      system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
+      rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
 
       system_upgrade_flag_set(UPGRADE_FLAG_FINISH);
       system_upgrade_reboot();
@@ -230,93 +200,6 @@ void check_for_update_firmware(char *response) {
    FREE(update->url);
    FREE(update);
 }*/
-
-char *sent_request(char *request) {
-   int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
-
-   if(socket_result < 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(FAILED_TO_ALLOCATE_SOCKET_MSG);
-      #endif
-
-      return NULL;
-   }
-   #ifdef ALLOW_USE_PRINTF
-   printf(ALLOCATED_SOCKET_MSG, socket_result);
-   #endif
-
-   struct sockaddr_in destination_address;
-   destination_address.sin_addr.s_addr = inet_addr(SERVER_IP_ADDRESS);
-   destination_address.sin_family = AF_INET;
-   destination_address.sin_port = htons(SERVER_PORT);
-
-   int connection_result = connect(socket_result, (struct sockaddr *) &destination_address, sizeof(destination_address));
-
-   if(connection_result != 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(SOCKET_CONNECTION_ERROR_MSG, connection_result);
-      #endif
-
-      close(socket_result);
-      return NULL;
-   }
-
-   #ifdef ALLOW_USE_PRINTF
-   printf(SOCKET_CONNECTED_ERROR_MSG, socket_result);
-   #endif
-
-   if (!is_connected_to_wifi()) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(NOT_CONNECTED_TO_WI_FI_MSG);
-      #endif
-
-      return NULL;
-   }
-
-   int send_result = send(socket_result, request, strlen(request), 0);
-
-   if (send_result < 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
-      #endif
-
-      return NULL;
-   }
-   #ifdef ALLOW_USE_PRINTF
-   printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
-   #endif
-
-   unsigned char buffer_size = 255;
-   char *rx_buffer = MALLOC(buffer_size, __LINE__, milliseconds_counter_g);
-   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
-
-   if (len < 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
-      #endif
-
-      FREE(rx_buffer, __LINE__);
-      return NULL;
-   } else {
-      rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\nReceived %d bytes\n", len);
-      printf("\nResponse: %s\n", rx_buffer);
-      #endif
-   }
-
-   if (socket_result != -1) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(SHUTTING_DOWN_SOCKET_MSG);
-      #endif
-
-      shutdown(socket_result, 0);
-      close(socket_result);
-   }
-
-   return rx_buffer;
-}
 
 void send_status_info_task(void *pvParameters) {
    /*if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
@@ -380,33 +263,33 @@ void send_status_info_task(void *pvParameters) {
             break;
       }
 
-      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
+      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type;
 
-      //system_rtc_mem_read(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
+      rtc_mem_read(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
 
       if (system_restart_reason_type == ACCESS_POINT_CONNECTION_ERROR) {
          int connection_error_code = 1;
          char system_restart_reason_inner[31];
 
-         //system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
+         rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
 
-         snprintf(system_restart_reason_inner, 31, "AP connection error. Code: %d", connection_error_code);
+         snprintf(system_restart_reason_inner, 31, "AP connections error. Code: %d", connection_error_code);
          system_restart_reason = system_restart_reason_inner;
       } else if (system_restart_reason_type == REQUEST_CONNECTION_ERROR) {
          int connection_error_code = 1;
          char system_restart_reason_inner[25];
 
-         //system_rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
+         rtc_mem_read(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code, 4);
 
-         snprintf(system_restart_reason_inner, 25, "Request error. Code: %d", connection_error_code);
+         snprintf(system_restart_reason_inner, 25, "Requests error. Code: %d", connection_error_code);
          system_restart_reason = system_restart_reason_inner;
       } else if (system_restart_reason_type == SOFTWARE_UPGRADE) {
          system_restart_reason = "Software upgrade";
       }
 
-      //unsigned int overwrite_value = 0xFF;
-      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &overwrite_value, 4);
-      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &overwrite_value, 4);
+      unsigned int overwrite_value = 0xFFFF;
+      rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &overwrite_value, 4);
+      rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &overwrite_value, 4);
    }
 
    const char *status_info_request_payload_template_parameters[] =
@@ -421,18 +304,26 @@ void send_status_info_task(void *pvParameters) {
    char request_payload_length_string[6];
    snprintf(request_payload_length_string, 6, "%u", request_payload_length);
    const char *request_template_parameters[] = {request_payload_length_string, SERVER_IP_ADDRESS, request_payload, NULL};
+   FREE(request_payload, __LINE__);
    char *request = set_string_parameters(STATUS_INFO_POST_REQUEST, request_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
    printf(CREATED_REQUEST_CONTENT_MSG, request);
    #endif
 
-   FREE(request_payload, __LINE__);
-
-   sent_request(request);
+   char *response = send_request(request, milliseconds_counter_g);
 
    FREE(request, __LINE__);
 
+   if (response == NULL) {
+      repetitive_request_errors_counter_g++;
+   } else {
+      if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
+         repetitive_request_errors_counter_g = 0;
+      }
+
+      FREE(response, __LINE__);
+   }
 
    vTaskDelete(NULL);
 }
@@ -593,21 +484,19 @@ void check_errors_amount() {
       printf(REQUEST_ERRORS_AMOUNT_MSG, repetitive_request_errors_counter_g);
       #endif
 
-      //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
+      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
 
-      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
-      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code_g, 4);
+      rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
+      rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, &connection_error_code_g, 4);
       restart = true;
    } else if (repetitive_ap_connecting_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
       printf(CONNECTION_ERRORS_AMOUNT_MSG, repetitive_ap_connecting_errors_counter_g);
       #endif
 
-      //SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
-      //STATION_STATUS status = wifi_station_get_connect_status();
+      SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
 
-      //system_rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
-      //system_rtc_mem_write(CONNECTION_ERROR_CODE_RTC_ADDRESS, 0xFFFF, 4);
+      rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &system_restart_reason_type, 4);
       restart = true;
    }
 
@@ -617,12 +506,12 @@ void check_errors_amount() {
 }
 
 void app_main(void) {
+   vTaskDelay(3000 / portTICK_RATE_MS);
+
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
    uart_config();
-
-   vTaskDelay(1000 / portTICK_RATE_MS);
 
    tcpip_adapter_init();
    tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Stop DHCP client

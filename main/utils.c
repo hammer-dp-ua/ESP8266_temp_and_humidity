@@ -1,5 +1,15 @@
 #include "utils.h"
 
+static const char FAILED_TO_ALLOCATE_SOCKET_MSG[] = "\nFailed to allocate socket\n";
+static const char ALLOCATED_SOCKET_MSG[] = "\nSocket %d has been allocated\n";
+static const char SOCKET_CONNECTION_ERROR_MSG[] = "\nSocket connection failed. Error: %d\n";
+static const char SOCKET_CONNECTED_ERROR_MSG[] = "\nSocket %d has been connected\n";
+static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To be deleted task\n";
+static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
+static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
+static const char ERROR_ON_RECEIVE_RESPONSE_MSG[] = "\nReceive failed. Error no.: %d\n";
+static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...";
+
 // FreeRTOS event group to signal when we are connected
 // Max 24 bits when configUSE_16_BIT_TICKS is 0
 static EventGroupHandle_t wifi_event_group;
@@ -218,6 +228,181 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
 bool is_connected_to_wifi()
 {
    return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) == WIFI_CONNECTED_BIT;
+}
+
+/**
+  * @brief     Read user data from the RTC memory.
+  *
+  *            The user data segment (512 bytes, as shown below) is used to store user data.
+  *
+  *             |<---- system data(256 bytes) ---->|<----------- user data(512 bytes) --------->|
+  *
+  * @attention Read and write unit for data stored in the RTC memory is 4 bytes.
+  * @attention src_addr is the block number (4 bytes per block). So when reading data
+  *            at the beginning of the user data segment, src_addr will be 256/4 = 64,
+  *            n will be data length.
+  *
+  * @param     unsigned char addr :    source address of rtc memory, addr >= 64
+  * @param     void *dst :             data pointer
+  * @param     unsigned short length : data length, unit: byte
+  *
+  * @return    true  : succeed
+  * @return    false : fail
+  */
+bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length) {
+   short blocks;
+
+   // validate reading a user block
+   if (addr < 64) return false;
+   if (dst == 0) return false;
+   // validate 4 byte aligned
+   if (((unsigned int)dst & 0x3) != 0) return false;
+   // validate length is multiple of 4
+   if ((length & 0x3) != 0) return false;
+
+   // check valid length from specified starting point
+   if (length > ((256 + 512) - (addr * 4))) return false;
+
+   // copy the data
+   for (blocks = (length >> 2) - 1; blocks >= 0; blocks--) {
+      volatile unsigned int *ram = ((unsigned int*)dst) + blocks;
+      volatile unsigned int *rtc = ((unsigned int*)PERIPHS_RTC_BASEADDR) + addr + blocks;
+      *rtc = *ram;
+   }
+
+   return true;
+}
+
+/**
+  * @brief     Write user data to  the RTC memory.
+  *
+  *            During deep-sleep, only RTC is working. So users can store their data
+  *            in RTC memory if it is needed. The user data segment below (512 bytes)
+  *            is used to store the user data.
+  *
+  *            |<---- system data(256 bytes) ---->|<----------- user data(512 bytes) --------->|
+  *
+  * @attention Read and write unit for data stored in the RTC memory is 4 bytes.
+  * @attention src_addr is the block number (4 bytes per block). So when storing data
+  *            at the beginning of the user data segment, src_addr will be 256/4 = 64,
+  *            n will be data length.
+  *
+  * @param     unsigned short dst :    destination address of rtc memory, dst >= 64
+  * @param     const void *src :       data pointer
+  * @param     unsigned short length : data length, unit: byte
+  *
+  * @return    true  : succeed
+  * @return    false : fail
+  */
+bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length) {
+   short blocks;
+
+   // validate reading a user block
+   if (dst < 64) return false;
+   if (src == 0) return false;
+   // validate 4 byte aligned
+   if (((unsigned int)src & 0x3) != 0) return false;
+   // validate length is multiple of 4
+   if ((length & 0x3) != 0) return false;
+
+   // check valid length from specified starting point
+   if (length > ((256 + 512) - (dst))) return false;
+
+   // copy the data
+   for (blocks = (length >> 2) - 1; blocks >= 0; blocks--) {
+      volatile unsigned int *ram = ((unsigned int*)src) + blocks;
+      volatile unsigned int *rtc = ((unsigned int*)PERIPHS_RTC_BASEADDR) + dst + blocks;
+      *rtc = *ram;
+   }
+
+   return true;
+}
+
+char *send_request(char *request, unsigned int invocation_time) {
+   int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
+
+   if(socket_result < 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(FAILED_TO_ALLOCATE_SOCKET_MSG);
+      #endif
+
+      return NULL;
+   }
+   #ifdef ALLOW_USE_PRINTF
+   printf(ALLOCATED_SOCKET_MSG, socket_result);
+   #endif
+
+   struct sockaddr_in destination_address;
+   destination_address.sin_addr.s_addr = inet_addr(SERVER_IP_ADDRESS);
+   destination_address.sin_family = AF_INET;
+   destination_address.sin_port = htons(SERVER_PORT);
+
+   int connection_result = connect(socket_result, (struct sockaddr *) &destination_address, sizeof(destination_address));
+
+   if(connection_result != 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(SOCKET_CONNECTION_ERROR_MSG, connection_result);
+      #endif
+
+      close(socket_result);
+      return NULL;
+   }
+
+   #ifdef ALLOW_USE_PRINTF
+   printf(SOCKET_CONNECTED_ERROR_MSG, socket_result);
+   #endif
+
+   if (!is_connected_to_wifi()) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(NOT_CONNECTED_TO_WI_FI_MSG);
+      #endif
+
+      return NULL;
+   }
+
+   int send_result = send(socket_result, request, strlen(request), 0);
+
+   if (send_result < 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
+      #endif
+
+      return NULL;
+   }
+   #ifdef ALLOW_USE_PRINTF
+   printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
+   #endif
+
+   unsigned char buffer_size = 255;
+   char *rx_buffer = MALLOC(buffer_size, __LINE__, invocation_time);
+   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
+
+   if (len < 0) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
+      #endif
+
+      FREE(rx_buffer, __LINE__);
+      return NULL;
+   } else {
+      rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nReceived %d bytes\n", len);
+      printf("\nResponse: %s\n", rx_buffer);
+      #endif
+   }
+
+   if (socket_result != -1) {
+      #ifdef ALLOW_USE_PRINTF
+      printf(SHUTTING_DOWN_SOCKET_MSG);
+      #endif
+
+      shutdown(socket_result, 0);
+      close(socket_result);
+   }
+
+   return rx_buffer;
 }
 
 /*

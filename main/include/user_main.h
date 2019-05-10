@@ -14,9 +14,6 @@
 #include "esp_wifi.h"
 #include "string.h"
 #include "utils.h"
-#include "lwip/sys.h"
-#include "lwip/inet.h"
-#include "sys/socket.h"
 #include "event_groups.h"
 #include "global_definitions.h"
 #include "malloc_logger.h"
@@ -76,7 +73,7 @@ typedef enum {
 } SYSTEM_RESTART_REASON_TYPE;
 
 const char RESPONSE_SERVER_SENT_OK[] = "\"statusCode\":\"OK\"";
-char STATUS_INFO_POST_REQUEST[] =
+const char STATUS_INFO_POST_REQUEST[] =
       "POST /server/esp8266/statusInfo HTTP/1.1\r\n"
       "Content-Length: <1>\r\n"
       "Host: <2>\r\n"
@@ -85,7 +82,7 @@ char STATUS_INFO_POST_REQUEST[] =
       "Connection: close\r\n"
       "Accept: application/json\r\n\r\n"
       "<3>\r\n";
-char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
+const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "{\"gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"
@@ -95,27 +92,12 @@ char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"freeHeapSpace\":<7>,"
       "\"resetReason\":\"<8>\","
       "\"systemRestartReason\":\"<9>\"}";
-const char ALARM_GET_REQUEST[] =
-      "GET /server/esp8266/alarm?alarmSource=<1> HTTP/1.1\r\n"
-      "Host: <2>\r\n"
-      "User-Agent: ESP8266\r\n"
-      "Connection: close\r\n"
-      "Accept: application/json\r\n\r\n";
-const char FALSE_ALARM_GET_REQUEST[] =
-      "GET /server/esp8266/falseAlarm?alarmSource=<1> HTTP/1.1\r\n"
-      "Host: <2>\r\n"
-      "User-Agent: ESP8266\r\n"
-      "Connection: close\r\n"
-      "Accept: application/json\r\n\r\n";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
-const char MANUALLY_IGNORE_ALARMS[] = "\"ignoreAlarms\":true";
 const char FIRMWARE_UPDATE_GET_REQUEST[] =
       "GET /esp8266_fota/<1> HTTP/1.1\r\n"
       "Host: <2>\r\n"
       "User-Agent: ESP8266\r\n"
       "Connection: close\r\n\r\n";
-const char MW_LED[] = "MW_LED";
-const char MOTION_SENSOR[] = "MOTION_SENSOR";
 
 void pins_config();
 static void uart_config();
@@ -138,7 +120,6 @@ void recheck_false_alarm_callback();
 void disconnect_connection_task(void *pvParameters);
 void schedule_sending_status_info();
 bool check_to_continue();
-char *sent_request(char *request);
 
 #endif
 
