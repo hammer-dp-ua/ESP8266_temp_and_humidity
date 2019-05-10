@@ -318,7 +318,7 @@ bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length) {
    return true;
 }
 
-char *send_request(char *request, unsigned int invocation_time) {
+char *send_request(char *request, unsigned short response_buffer_length, unsigned int invocation_time) {
    int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
 
    if(socket_result < 0) {
@@ -357,52 +357,77 @@ char *send_request(char *request, unsigned int invocation_time) {
       printf(NOT_CONNECTED_TO_WI_FI_MSG);
       #endif
 
+      close(socket_result);
       return NULL;
    }
 
-   int send_result = send(socket_result, request, strlen(request), 0);
+   unsigned short received_bytes = 0;
+   char *final_response_result = MALLOC(response_buffer_length, __LINE__, invocation_time);
 
-   if (send_result < 0) {
+   while (1) {
+      int send_result = send(socket_result, request, strlen(request), 0);
+
+      if (send_result < 0) {
+         #ifdef ALLOW_USE_PRINTF
+         printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
+         #endif
+
+         break;
+      }
       #ifdef ALLOW_USE_PRINTF
-      printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
+      printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
       #endif
 
-      return NULL;
+      char tmp_buffer[256];
+      int len = recv(socket_result, tmp_buffer, 256 - 1, 0);
+      tmp_buffer[len] = '\0';
+
+      if (len < 0) {
+         #ifdef ALLOW_USE_PRINTF
+         printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
+         #endif
+
+         break;
+      } else if (len == 0) {
+         final_response_result[received_bytes] = '\0';
+
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nFinal response: %s\n", final_response_result);
+         #endif
+
+         break;
+      } else {
+         bool max_length_exceed = false;
+
+         for (unsigned short i = 0; i < len; i++) {
+            unsigned short addend = received_bytes + i;
+
+            if (addend >= response_buffer_length) {
+               max_length_exceed = true;
+               received_bytes = response_buffer_length;
+               break;
+            }
+
+            *(final_response_result + addend) = tmp_buffer[i];
+         }
+         received_bytes += max_length_exceed ? 0 : len;
+
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nReceived %d bytes\n", len);
+         printf("\nResponse: %s\n", tmp_buffer);
+         #endif
+      }
    }
+   FREE(final_response_result, __LINE__);
+
    #ifdef ALLOW_USE_PRINTF
-   printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
+   printf(SHUTTING_DOWN_SOCKET_MSG);
    #endif
 
-   unsigned char buffer_size = 255;
-   char *rx_buffer = MALLOC(buffer_size, __LINE__, invocation_time);
-   int len = recv(socket_result, rx_buffer, buffer_size - 1, 0);
+   shutdown(socket_result, 0);
+   close(socket_result);
 
-   if (len < 0) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
-      #endif
-
-      FREE(rx_buffer, __LINE__);
-      return NULL;
-   } else {
-      rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\nReceived %d bytes\n", len);
-      printf("\nResponse: %s\n", rx_buffer);
-      #endif
-   }
-
-   if (socket_result != -1) {
-      #ifdef ALLOW_USE_PRINTF
-      printf(SHUTTING_DOWN_SOCKET_MSG);
-      #endif
-
-      shutdown(socket_result, 0);
-      close(socket_result);
-   }
-
-   return rx_buffer;
+   return final_response_result;
 }
 
 /*

@@ -304,26 +304,28 @@ void send_status_info_task(void *pvParameters) {
    char request_payload_length_string[6];
    snprintf(request_payload_length_string, 6, "%u", request_payload_length);
    const char *request_template_parameters[] = {request_payload_length_string, SERVER_IP_ADDRESS, request_payload, NULL};
-   FREE(request_payload, __LINE__);
    char *request = set_string_parameters(STATUS_INFO_POST_REQUEST, request_template_parameters);
+   FREE(request_payload, __LINE__);
 
    #ifdef ALLOW_USE_PRINTF
    printf(CREATED_REQUEST_CONTENT_MSG, request);
    #endif
 
-   char *response = send_request(request, milliseconds_counter_g);
+   send_request(request, 255, milliseconds_counter_g);
 
-   FREE(request, __LINE__);
-
-   if (response == NULL) {
+   /*if (response == NULL) {
       repetitive_request_errors_counter_g++;
    } else {
       if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
-         repetitive_request_errors_counter_g = 0;
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nResponse OK\n");
+         #endif
+      } else {
+         repetitive_request_errors_counter_g++;
       }
 
       FREE(response, __LINE__);
-   }
+   }*/
 
    vTaskDelete(NULL);
 }

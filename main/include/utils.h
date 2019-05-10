@@ -27,5 +27,5 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
 bool is_connected_to_wifi();
 bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length);
 bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length);
-char *send_request(char *request, unsigned int invocation_time);
+char *send_request(char *request, unsigned short response_buffer_length, unsigned int invocation_time);
 #endif
