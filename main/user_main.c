@@ -311,12 +311,14 @@ void send_status_info_task(void *pvParameters) {
    printf(CREATED_REQUEST_CONTENT_MSG, request);
    #endif
 
-   send_request(request, 255, milliseconds_counter_g);
+   char *response = send_request(request, 255, milliseconds_counter_g);
 
-   /*if (response == NULL) {
+   if (response == NULL) {
       repetitive_request_errors_counter_g++;
    } else {
       if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
+         gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
+
          #ifdef ALLOW_USE_PRINTF
          printf("\nResponse OK\n");
          #endif
@@ -325,7 +327,7 @@ void send_status_info_task(void *pvParameters) {
       }
 
       FREE(response, __LINE__);
-   }*/
+   }
 
    vTaskDelete(NULL);
 }
@@ -343,8 +345,9 @@ void schedule_sending_status_info(unsigned int timeout_ms) {
 void pins_config() {
    gpio_config_t output_pins;
    output_pins.mode = GPIO_MODE_OUTPUT;
-   output_pins.pin_bit_mask = AP_CONNECTION_STATUS_LED_PIN | SERVER_AVAILABILITY_STATUS_LED_PIN;
+   output_pins.pin_bit_mask = (1<<AP_CONNECTION_STATUS_LED_PIN) | (1<<SERVER_AVAILABILITY_STATUS_LED_PIN);
    output_pins.pull_up_en = GPIO_PULLUP_DISABLE;
+   output_pins.pull_down_en = GPIO_PULLDOWN_DISABLE;
 
    gpio_config(&output_pins);
 }
@@ -507,13 +510,72 @@ void check_errors_amount() {
    }
 }
 
-void app_main(void) {
-   vTaskDelay(3000 / portTICK_RATE_MS);
+static esp_err_t i2c_master_init() {
+   i2c_config_t conf;
+   conf.mode = I2C_MODE_MASTER;
+   conf.sda_io_num = I2C_MASTER_SDA_IO;
+   conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+   conf.scl_io_num = I2C_MASTER_SCL_IO;
+   conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+   ESP_ERROR_CHECK(i2c_driver_install(I2C_MASTER_NUM, conf.mode));
+   ESP_ERROR_CHECK(i2c_param_config(I2C_MASTER_NUM, &conf));
+   return ESP_OK;
+}
 
+static esp_err_t i2c_master_sht21_write(uint8_t command) {
+   int ret;
+   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+   i2c_master_start(cmd);
+   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
+   i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
+   //i2c_master_write(cmd, data, data_len, ACK_CHECK_EN);
+   i2c_master_stop(cmd);
+   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 100 / portTICK_RATE_MS);
+   i2c_cmd_link_delete(cmd);
+
+   return ret;
+}
+
+static esp_err_t i2c_master_sht21_read(uint8_t command, uint8_t *data, size_t data_len) {
+   int ret;
+   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+   i2c_master_start(cmd);
+   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
+   i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
+   i2c_master_stop(cmd);
+   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
+   i2c_cmd_link_delete(cmd);
+
+   if (ret != ESP_OK) {
+     return ret;
+   }
+
+   cmd = i2c_cmd_link_create();
+   i2c_master_start(cmd);
+   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_READ, ACK_CHECK_EN);
+   i2c_master_read(cmd, data, data_len, LAST_NACK_VAL);
+   i2c_master_stop(cmd);
+   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
+   i2c_cmd_link_delete(cmd);
+
+   return ret;
+}
+
+static void testing_task(void *pvParameters) {
+   while(1) {
+      i2c_master_sht21_write(TRIGGER_T_MEASUREMENT);
+      vTaskDelay(3000 / portTICK_RATE_MS);
+   }
+}
+
+void app_main(void) {
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
    uart_config();
+   i2c_master_init();
+
+   vTaskDelay(3000 / portTICK_RATE_MS);
 
    tcpip_adapter_init();
    tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Stop DHCP client
@@ -526,7 +588,7 @@ void app_main(void) {
    //ESP_LOGI(TAG, "Software is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
 
    //wifi_set_event_handler_cb(wifi_event_handler_callback);
-   wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
+   //wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
    //os_timer_setfn(&ap_autoconnect_timer_g, (os_timer_func_t *) ap_autoconnect, NULL);
    //os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
@@ -534,7 +596,7 @@ void app_main(void) {
 
    //xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
-   //xTaskCreate(testing_task, "testing_task", 200, NULL, 1, NULL);
+   xTaskCreate(testing_task, "testing_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);

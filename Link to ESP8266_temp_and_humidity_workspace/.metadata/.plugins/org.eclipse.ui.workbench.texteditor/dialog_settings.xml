@@ -2,29 +2,31 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="os_malloc" key="selection"/>
+		<item value="SERVER_AVAILABILITY_STATUS_LED_PIN" key="selection"/>
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="true" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
-			<item value="os_malloc"/>
-			<item value="MALLOC"/>
-			<item value="malloc_logger("/>
-			<item value="malloc_logger"/>
-			<item value="free_logger"/>
-			<item value="print_not_empty_elements_lines"/>
-			<item value="FIRST_STATUS_INFO_SENT_FLAG"/>
-			<item value="Got IP"/>
+			<item value="SERVER_AVAILABILITY_STATUS_LED_PIN"/>
+			<item value="AP_CONNECTION_STATUS_LED_PIN"/>
+			<item value="*("/>
+			<item value="ERROR_ON_RECEIVE_RESPONSE_MSG"/>
+			<item value="Receive failed. Error no.:"/>
+			<item value="send_request"/>
+			<item value="repetitive_request_errors_counter_g"/>
+			<item value="~~~"/>
 		</list>
 		<list key="replacehistory">
+			<item value="rtc_mem_write"/>
+			<item value="rtc_mem_read"/>
 		</list>
 	</section>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
 		<item value="284" key="DIALOG_WIDTH"/>
 		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
 		<item value="391" key="DIALOG_HEIGHT"/>
-		<item value="1228" key="DIALOG_X_ORIGIN"/>
-		<item value="449" key="DIALOG_Y_ORIGIN"/>
+		<item value="1257" key="DIALOG_X_ORIGIN"/>
+		<item value="517" key="DIALOG_Y_ORIGIN"/>
 	</section>
 </section>

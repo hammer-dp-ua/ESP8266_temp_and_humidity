@@ -318,7 +318,7 @@ bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length) {
    return true;
 }
 
-char *send_request(char *request, unsigned short response_buffer_length, unsigned int invocation_time) {
+char *send_request(char *request, unsigned short response_buffer_size, unsigned int invocation_time) {
    int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
 
    if(socket_result < 0) {
@@ -361,10 +361,10 @@ char *send_request(char *request, unsigned short response_buffer_length, unsigne
       return NULL;
    }
 
-   unsigned short received_bytes = 0;
-   char *final_response_result = MALLOC(response_buffer_length, __LINE__, invocation_time);
+   unsigned short received_bytes_amount = 0;
+   char *final_response_result = MALLOC(response_buffer_size, __LINE__, invocation_time);
 
-   while (1) {
+   for(;;) {
       int send_result = send(socket_result, request, strlen(request), 0);
 
       if (send_result < 0) {
@@ -378,8 +378,9 @@ char *send_request(char *request, unsigned short response_buffer_length, unsigne
       printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
       #endif
 
-      char tmp_buffer[256];
-      int len = recv(socket_result, tmp_buffer, 256 - 1, 0);
+      unsigned char tmp_buffer_size = response_buffer_size <= 255 ? response_buffer_size : 255;
+      char tmp_buffer[tmp_buffer_size];
+      int len = recv(socket_result, tmp_buffer, tmp_buffer_size - 1, 0);
       tmp_buffer[len] = '\0';
 
       if (len < 0) {
@@ -389,7 +390,7 @@ char *send_request(char *request, unsigned short response_buffer_length, unsigne
 
          break;
       } else if (len == 0) {
-         final_response_result[received_bytes] = '\0';
+         final_response_result[received_bytes_amount] = '\0';
 
          #ifdef ALLOW_USE_PRINTF
          printf("\nFinal response: %s\n", final_response_result);
@@ -400,17 +401,17 @@ char *send_request(char *request, unsigned short response_buffer_length, unsigne
          bool max_length_exceed = false;
 
          for (unsigned short i = 0; i < len; i++) {
-            unsigned short addend = received_bytes + i;
+            unsigned short addend = received_bytes_amount + i;
 
-            if (addend >= response_buffer_length) {
+            if (addend >= response_buffer_size) {
                max_length_exceed = true;
-               received_bytes = response_buffer_length;
+               received_bytes_amount = response_buffer_size;
                break;
             }
 
             *(final_response_result + addend) = tmp_buffer[i];
          }
-         received_bytes += max_length_exceed ? 0 : len;
+         received_bytes_amount += max_length_exceed ? 0 : len;
 
          #ifdef ALLOW_USE_PRINTF
          printf("\nReceived %d bytes\n", len);
@@ -418,7 +419,6 @@ char *send_request(char *request, unsigned short response_buffer_length, unsigne
          #endif
       }
    }
-   FREE(final_response_result, __LINE__);
 
    #ifdef ALLOW_USE_PRINTF
    printf(SHUTTING_DOWN_SOCKET_MSG);

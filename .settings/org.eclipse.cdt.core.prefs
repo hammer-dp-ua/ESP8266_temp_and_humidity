@@ -3,7 +3,7 @@ environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BU
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/operation=append
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/value=1
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/delimiter=;
-environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/operation=replace
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/value=COM6
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/delimiter=;
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/operation=replace

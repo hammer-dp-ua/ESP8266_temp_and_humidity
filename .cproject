@@ -27,6 +27,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.cygwin.base.1436115684" name="Cygwin C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.cygwin.base">
 								<option id="gnu.c.compiler.option.include.paths.661942967" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP8266_temp_and_humidity/main/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP8266_temp_and_humidity/build/esp8266/source}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.cygwin.988804643" superClass="cdt.managedbuild.tool.gnu.c.compiler.input.cygwin"/>
 							</tool>
