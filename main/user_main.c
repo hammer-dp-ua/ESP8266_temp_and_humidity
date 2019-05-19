@@ -524,10 +524,18 @@ static esp_err_t i2c_master_init() {
 
 static void testing_task(void *pvParameters) {
    while(1) {
-      float temp = sht21_get_temperature();
+      float temp;
+      esp_err_t i2c_result = sht21_get_temperature(&temp);
 
       #ifdef ALLOW_USE_PRINTF
-      printf("\nMeasured temp.: %d\n", (int) (temp * 100));
+      printf("\nMeasured temp.: %d, I2C result: 0x%x\n", (int) (temp * 100), i2c_result);
+      #endif
+
+      float humidity;
+      i2c_result = sht21_get_humidity(&humidity);
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nMeasured humidity: %d, I2C result: 0x%x\n", (int) (humidity * 100), i2c_result);
       #endif
 
       vTaskDelay(3000 / portTICK_RATE_MS);

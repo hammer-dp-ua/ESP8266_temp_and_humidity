@@ -23,4 +23,5 @@ typedef enum {
    TRIGGER_RH_MEASUREMENT = 0xF5
 } SHT21_Commands;
 
-float sht21_get_temperature();
+esp_err_t sht21_get_temperature(float *temperature);
+esp_err_t sht21_get_humidity(float *humidity);

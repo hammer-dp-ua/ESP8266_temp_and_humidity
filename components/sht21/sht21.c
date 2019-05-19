@@ -26,9 +26,9 @@ static esp_err_t i2c_master_sht21_read(unsigned char *data, size_t data_len) {
 }
 
 static esp_err_t i2c_master_sht21_write_and_read(unsigned char command,
-      unsigned char *read_data,
-      size_t data_len,
-      TickType_t measurement_time) {
+                                                 unsigned char *read_data,
+                                                 size_t data_len,
+                                                 TickType_t measurement_time) {
    if (data_len <= 0) {
       return ESP_ERR_INVALID_STATE;
    }
@@ -40,22 +40,24 @@ static esp_err_t i2c_master_sht21_write_and_read(unsigned char command,
    }
    ret = i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
    if (ret == ESP_ERR_INVALID_ARG) {
+      i2c_cmd_link_delete(cmd);
       return ret;
    }
    ret = i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
    if (ret == ESP_ERR_INVALID_ARG) {
+      i2c_cmd_link_delete(cmd);
       return ret;
    }
    ret = i2c_master_start(cmd); // Start condition is generated before read every time. There could be a few of re-reads
    if (ret == ESP_ERR_INVALID_ARG) {
-      return ret;
-   }
-   //ret = i2c_master_read(cmd, read_data, data_len, NACK_VAL);
-   //ret = i2c_master_stop(cmd);
-   if (ret == ESP_ERR_INVALID_ARG) {
+      i2c_cmd_link_delete(cmd);
       return ret;
    }
    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
+   if (ret != ESP_OK) {
+      i2c_cmd_link_delete(cmd);
+      return ret;
+   }
    i2c_cmd_link_delete(cmd);
 
    vTaskDelay(measurement_time);
@@ -110,32 +112,32 @@ static float sht21_calculate_humidity(unsigned short data, unsigned char checksu
    return 125 * humidity / 0xFFFF - 6;
 }
 
-float sht21_get_temperature() {
+esp_err_t sht21_get_temperature(float *temperature) {
    unsigned char data[3];
-   char *i2c_result_status_text;
-
    esp_err_t i2c_result_status = i2c_master_sht21_write_and_read(TRIGGER_T_MEASUREMENT, data, 3, 100 / portTICK_RATE_MS);
 
    if (i2c_result_status == ESP_OK) {
-      i2c_result_status_text = "ESP_OK";
-   } else if (i2c_result_status == ESP_ERR_INVALID_ARG) {
-      i2c_result_status_text = "ESP_ERR_INVALID_ARG";
-   } else if (i2c_result_status == ESP_FAIL) {
-      i2c_result_status_text = "ESP_FAIL";
-   } else if (i2c_result_status == ESP_ERR_INVALID_STATE) {
-      i2c_result_status_text = "ESP_ERR_INVALID_STATE";
-   } else if (i2c_result_status == ESP_ERR_TIMEOUT) {
-      i2c_result_status_text = "ESP_ERR_TIMEOUT";
+      unsigned short temp_data = (data[0] << 8) | data[1];
+      *temperature = sht21_calculate_temperature(temp_data, data[2]);
    } else {
-      i2c_result_status_text = "";
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nI2C ERROR. Result status: 0x%x", i2c_result_status);
+      #endif
    }
-
-   #ifdef ALLOW_USE_PRINTF
-   printf("\nI2C result status: %s", i2c_result_status_text);
-   printf("\nI2C result value: 0x%x, 0x%x, 0x%x\n", data[0], data[1], data[2]);
-   #endif
-
-   unsigned short temp_data = (data[0] << 8) | data[1];
-   return sht21_calculate_temperature(temp_data, data[2]);
+   return i2c_result_status;
 }
 
+esp_err_t sht21_get_humidity(float *humidity) {
+   unsigned char data[3];
+   esp_err_t i2c_result_status = i2c_master_sht21_write_and_read(TRIGGER_RH_MEASUREMENT, data, 3, 40 / portTICK_RATE_MS);
+
+   if (i2c_result_status == ESP_OK) {
+      unsigned short temp_data = (data[0] << 8) | data[1];
+      *humidity = sht21_calculate_humidity(temp_data, data[2]);
+   } else {
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nI2C ERROR. Result status: 0x%x", i2c_result_status);
+      #endif
+   }
+   return i2c_result_status;
+}
