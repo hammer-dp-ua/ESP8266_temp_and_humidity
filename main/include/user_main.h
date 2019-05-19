@@ -18,6 +18,7 @@
 #include "event_groups.h"
 #include "global_definitions.h"
 #include "malloc_logger.h"
+#include "sht21.h"
 
 #ifndef MAIN_HEADER
 #define MAIN_HEADER
@@ -25,16 +26,9 @@
 #define AP_CONNECTION_STATUS_LED_PIN         GPIO_NUM_5
 #define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_NUM_4
 
+#define I2C_MASTER_SCL_IO  2         // gpio number for I2C master clock, D4
+#define I2C_MASTER_SDA_IO  12        // gpio number for I2C master data, D6
 #define I2C_MASTER_NUM     I2C_NUM_0 // I2C port number for master dev
-#define I2C_MASTER_SCL_IO  2         // gpio number for I2C master clock
-#define I2C_MASTER_SDA_IO  14        // gpio number for I2C master data
-#define ACK_CHECK_EN       0x1       // I2C master will check ACK from slave
-#define ACK_VAL         0x0 // I2C ACK value
-#define NACK_VAL        0x1 // I2C ACK value
-#define LAST_NACK_VAL   0x2 // I2C last_nack value
-
-#define SHT21_ADDRESS                   (unsigned char) 0x40
-#define SHT21_ADDRESS_READ              (unsigned char) ((SHT21_ADDRESS << 1) | 0x1)
 
 #define SERVER_IS_AVAILABLE_FLAG                   2
 #define UPDATE_FIRMWARE_FLAG                       (1 << 1)
@@ -63,11 +57,6 @@ typedef enum {
    REQUEST_CONNECTION_ERROR,
    SOFTWARE_UPGRADE
 } SYSTEM_RESTART_REASON_TYPE;
-
-typedef enum {
-   TRIGGER_T_MEASUREMENT = 0xF3,
-   TRIGGER_RH_MEASUREMENT = 0xF5
-} SHT21_Commands;
 
 const char RESPONSE_SERVER_SENT_OK[] = "\"statusCode\":\"OK\"";
 const char STATUS_INFO_POST_REQUEST[] =

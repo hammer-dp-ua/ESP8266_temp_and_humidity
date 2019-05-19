@@ -522,48 +522,14 @@ static esp_err_t i2c_master_init() {
    return ESP_OK;
 }
 
-static esp_err_t i2c_master_sht21_write(uint8_t command) {
-   int ret;
-   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-   i2c_master_start(cmd);
-   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
-   i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
-   //i2c_master_write(cmd, data, data_len, ACK_CHECK_EN);
-   i2c_master_stop(cmd);
-   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 100 / portTICK_RATE_MS);
-   i2c_cmd_link_delete(cmd);
-
-   return ret;
-}
-
-static esp_err_t i2c_master_sht21_read(uint8_t command, uint8_t *data, size_t data_len) {
-   int ret;
-   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-   i2c_master_start(cmd);
-   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
-   i2c_master_write_byte(cmd, command, ACK_CHECK_EN);
-   i2c_master_stop(cmd);
-   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
-   i2c_cmd_link_delete(cmd);
-
-   if (ret != ESP_OK) {
-     return ret;
-   }
-
-   cmd = i2c_cmd_link_create();
-   i2c_master_start(cmd);
-   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_READ, ACK_CHECK_EN);
-   i2c_master_read(cmd, data, data_len, LAST_NACK_VAL);
-   i2c_master_stop(cmd);
-   ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
-   i2c_cmd_link_delete(cmd);
-
-   return ret;
-}
-
 static void testing_task(void *pvParameters) {
    while(1) {
-      i2c_master_sht21_write(TRIGGER_T_MEASUREMENT);
+      float temp = sht21_get_temperature();
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nMeasured temp.: %d\n", (int) (temp * 100));
+      #endif
+
       vTaskDelay(3000 / portTICK_RATE_MS);
    }
 }
