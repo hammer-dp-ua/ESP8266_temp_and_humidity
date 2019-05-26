@@ -1,4 +1,4 @@
-#include "sht21.h"
+#include "include/sht21.h"
 
 static esp_err_t i2c_master_sht21_write(unsigned char command) {
    int ret;

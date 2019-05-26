@@ -4,7 +4,7 @@ environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BU
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/BATCH_BUILD/value=1
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/delimiter=;
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/operation=replace
-environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/value=COM6
+environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/ESPPORT/value=COM7
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/delimiter=;
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/operation=replace
 environment/project/cdt.managedbuild.toolchain.gnu.cross.base.303442930/IDF_PATH/value=C\:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1

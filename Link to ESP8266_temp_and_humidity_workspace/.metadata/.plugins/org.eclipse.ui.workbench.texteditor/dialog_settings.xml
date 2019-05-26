@@ -2,20 +2,20 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="SERVER_AVAILABILITY_STATUS_LED_PIN" key="selection"/>
+		<item value="scan_access_point_task" key="selection"/>
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="true" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
-			<item value="SERVER_AVAILABILITY_STATUS_LED_PIN"/>
-			<item value="AP_CONNECTION_STATUS_LED_PIN"/>
-			<item value="*("/>
-			<item value="ERROR_ON_RECEIVE_RESPONSE_MSG"/>
-			<item value="Receive failed. Error no.:"/>
-			<item value="send_request"/>
-			<item value="repetitive_request_errors_counter_g"/>
-			<item value="~~~"/>
+			<item value="scan_access_point_task"/>
+			<item value="wifi_init_sta"/>
+			<item value="ap_connect_task"/>
+			<item value="blink_on_wifi_connection"/>
+			<item value="on_wifi_disconnected"/>
+			<item value="on_wifi_connected"/>
+			<item value="wifi_event_handler_callback"/>
+			<item value="send_status_info"/>
 		</list>
 		<list key="replacehistory">
 			<item value="rtc_mem_write"/>
@@ -26,7 +26,7 @@
 		<item value="284" key="DIALOG_WIDTH"/>
 		<item value="1|Segoe UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Segoe UI" key="DIALOG_FONT_NAME"/>
 		<item value="391" key="DIALOG_HEIGHT"/>
-		<item value="1257" key="DIALOG_X_ORIGIN"/>
-		<item value="517" key="DIALOG_Y_ORIGIN"/>
+		<item value="1375" key="DIALOG_X_ORIGIN"/>
+		<item value="320" key="DIALOG_Y_ORIGIN"/>
 	</section>
 </section>

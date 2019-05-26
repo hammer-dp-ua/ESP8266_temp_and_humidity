@@ -18,7 +18,10 @@
 #include "event_groups.h"
 #include "global_definitions.h"
 #include "malloc_logger.h"
+
+// components
 #include "sht21.h"
+#include "ota.h"
 
 #ifndef MAIN_HEADER
 #define MAIN_HEADER
@@ -79,11 +82,6 @@ const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"resetReason\":\"<8>\","
       "\"systemRestartReason\":\"<9>\"}";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
-const char FIRMWARE_UPDATE_GET_REQUEST[] =
-      "GET /esp8266_fota/<1> HTTP/1.1\r\n"
-      "Host: <2>\r\n"
-      "User-Agent: ESP8266\r\n"
-      "Connection: close\r\n\r\n";
 
 void pins_config();
 static void uart_config();

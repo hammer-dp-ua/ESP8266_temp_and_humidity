@@ -417,8 +417,7 @@ static void uart_event_task(void *pvParameters) {
    vTaskDelete(NULL);
 }
 
-static void on_wifi_connected()
-{
+static void on_wifi_connected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
    repetitive_ap_connecting_errors_counter_g = 0;
 
@@ -427,8 +426,7 @@ static void on_wifi_connected()
    }
 }
 
-static void on_wifi_disconnected()
-{
+static void on_wifi_disconnected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
 }
 
@@ -561,19 +559,19 @@ void app_main(void) {
 
    //ESP_LOGI(TAG, "Software is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
 
-   //wifi_set_event_handler_cb(wifi_event_handler_callback);
-   //wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
+   wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
    //os_timer_setfn(&ap_autoconnect_timer_g, (os_timer_func_t *) ap_autoconnect, NULL);
    //os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
-   //xTaskCreate(ap_connect_task, "ap_connect_task", 180, NULL, 1, NULL);
 
    //xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
-   xTaskCreate(testing_task, "testing_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   //xTaskCreate(testing_task, "testing_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
 
    start_100millisecons_counter();
+
+   update_firmware();
 }
