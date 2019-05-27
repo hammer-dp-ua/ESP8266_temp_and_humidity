@@ -2,20 +2,20 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="scan_access_point_task" key="selection"/>
+		<item value="user_rf_cal_sector_set" key="selection"/>
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="true" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
+			<item value="user_rf_cal_sector_set"/>
+			<item value="esp_ota_set_boot_partition"/>
+			<item value="OTA_EXAMPLE_APP_OFFSET"/>
+			<item value="esp_ota_firm_get_write_bytes"/>
+			<item value="set_string_parameters"/>
 			<item value="scan_access_point_task"/>
 			<item value="wifi_init_sta"/>
 			<item value="ap_connect_task"/>
-			<item value="blink_on_wifi_connection"/>
-			<item value="on_wifi_disconnected"/>
-			<item value="on_wifi_connected"/>
-			<item value="wifi_event_handler_callback"/>
-			<item value="send_status_info"/>
 		</list>
 		<list key="replacehistory">
 			<item value="rtc_mem_write"/>

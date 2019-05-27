@@ -33,10 +33,10 @@
 #define I2C_MASTER_SDA_IO  12        // gpio number for I2C master data, D6
 #define I2C_MASTER_NUM     I2C_NUM_0 // I2C port number for master dev
 
-#define SERVER_IS_AVAILABLE_FLAG                   2
+#define SERVER_IS_AVAILABLE_FLAG
 #define UPDATE_FIRMWARE_FLAG                       (1 << 1)
-#define REQUEST_ERROR_OCCURRED_FLAG                8
-#define FIRST_STATUS_INFO_SENT_FLAG                (1 << 0) //( 1 << 4 )
+#define REQUEST_ERROR_OCCURRED_FLAG
+#define FIRST_STATUS_INFO_SENT_FLAG                (1 << 0)
 
 #define REQUEST_IDLE_TIME_ON_ERROR        (10000 / portTICK_RATE_MS) // 10 sec
 #define REQUEST_MAX_DURATION_TIME         (10000 / portTICK_RATE_MS) // 10 sec

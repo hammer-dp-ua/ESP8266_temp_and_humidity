@@ -2,3 +2,9 @@
 /build
 /Link to ESP8266_temp_and_humidity_workspace/.metadata/.plugins/org.eclipse.core.resources/.history
 /Link to ESP8266_temp_and_humidity_workspace/.metadata/.plugins/org.eclipse.core.resources/.projects/ESP8266_temp_and_humidity/.indexes
+/_Makefile
+/compile4096.bat
+/first_build_config.bat
+/readme.txt
+/sdkconfig.old
+/RemoteSystemsTempFiles

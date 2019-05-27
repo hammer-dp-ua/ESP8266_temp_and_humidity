@@ -51,14 +51,16 @@ bool _esp_ota_firm_parse_http(esp_ota_firm_t *ota_firm, const char *text, size_t
       if (ota_firm->content_len == 0 && (ptr = (char *) strstr(text, "Content-Length")) != NULL) {
          ptr += 16;
          ptr2 = (char *) strstr(ptr, "\r\n");
+
          memset(length_str, 0, sizeof(length_str));
          memcpy(length_str, ptr, ptr2 - ptr);
+
          ota_firm->content_len = atoi(length_str);
 
          ota_firm->ota_size = ota_firm->content_len;
          ota_firm->ota_offset = 0;
 
-         ESP_LOGI(TAG, "parse Content-Length: %d, ota_size %d", ota_firm->content_len, ota_firm->ota_size);
+         ESP_LOGI(TAG, "Parse Content-Length: %d, ota_size %d", ota_firm->content_len, ota_firm->ota_size);
       }
 
       i_read_len = read_until(&text[i], '\n', total_len - i);
@@ -71,7 +73,7 @@ bool _esp_ota_firm_parse_http(esp_ota_firm_t *ota_firm, const char *text, size_t
       // if resolve \r\n line, HTTP header is finished
       if (i_read_len == 2) {
          if (ota_firm->content_len == 0) {
-            ESP_LOGE(TAG, "did not parse Content-Length item");
+            ESP_LOGE(TAG, "Did not parse Content-Length item");
             task_fatal_error();
          }
 
@@ -157,19 +159,19 @@ static void esp_ota_firm_parse_msg(esp_ota_firm_t *ota_firm, const char *in_buf,
 }
 
 static inline int esp_ota_firm_can_write(esp_ota_firm_t *ota_firm) {
-    return (ota_firm->state == ESP_OTA_START || ota_firm->state == ESP_OTA_RECVED);
+   return (ota_firm->state == ESP_OTA_START || ota_firm->state == ESP_OTA_RECVED);
 }
 
-static inline const char* esp_ota_firm_get_write_buf(esp_ota_firm_t *ota_firm) {
-    return ota_firm->buf;
+static inline const char *esp_ota_firm_get_write_buf(esp_ota_firm_t *ota_firm) {
+   return ota_firm->buf;
 }
 
 static inline size_t esp_ota_firm_get_write_bytes(esp_ota_firm_t *ota_firm) {
-    return ota_firm->bytes;
+   return ota_firm->bytes;
 }
 
 static inline int esp_ota_firm_is_finished(esp_ota_firm_t *ota_firm) {
-    return (ota_firm->state == ESP_OTA_FINISH || ota_firm->state == ESP_OTA_RECVED);
+   return ota_firm->state == ESP_OTA_FINISH || ota_firm->state == ESP_OTA_RECVED;
 }
 
 static void update_firmware_task(void *pvParameter) {
@@ -184,19 +186,12 @@ static void update_firmware_task(void *pvParameter) {
    const esp_partition_t *running = esp_ota_get_running_partition();
 
    if (configured != running) {
-      ESP_LOGW(TAG, "Configured OTA boot partition at offset 0x%08x, but running from offset 0x%08x", configured->address, running->address);
+      ESP_LOGW(TAG, "Configured OTA boot partition at offset 0x%X, but running from offset 0x%X", configured->address, running->address);
       ESP_LOGW(TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
    }
-   ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%08x)", running->type, running->subtype, running->address);
+   ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%X)", running->type, running->subtype, running->address);
 
-   // Send GET request to HTTP server
-   const char FIRMWARE_UPDATE_GET_REQUEST[] =
-         "GET /esp8266_fota/<1> HTTP/1.1\r\n"
-         "Host: <2>\r\n"
-         "User-Agent: ESP8266\r\n"
-         "Connection: close\r\n\r\n";
-
-   const char *request_parameters[] = {"file_name", SERVER_IP_ADDRESS, NULL};
+   const char *request_parameters[] = {"firmware.bin", SERVER_IP_ADDRESS, NULL};
    char *http_request = set_string_parameters(FIRMWARE_UPDATE_GET_REQUEST, request_parameters);
    int res = send(socket_id, http_request, strlen(http_request), 0);
 
@@ -210,7 +205,7 @@ static void update_firmware_task(void *pvParameter) {
    }
 
    update_partition = esp_ota_get_next_update_partition(NULL);
-   ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x", update_partition->subtype, update_partition->address);
+   ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%X", update_partition->subtype, update_partition->address);
    assert(update_partition != NULL);
 
    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
@@ -249,7 +244,7 @@ static void update_firmware_task(void *pvParameter) {
          err = esp_ota_write(update_handle, (const void *) ota_write_data, buff_len);
 
          if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Error: esp_ota_write failed! err=0x%x", err);
+            ESP_LOGE(TAG, "Error: esp_ota_write failed! err=0x%X", err);
             task_fatal_error();
          }
 
@@ -278,7 +273,7 @@ static void update_firmware_task(void *pvParameter) {
    err = esp_ota_set_boot_partition(update_partition);
 
    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "esp_ota_set_boot_partition failed! err=0x%x", err);
+      ESP_LOGE(TAG, "esp_ota_set_boot_partition failed! err=0x%X", err);
       task_fatal_error();
    }
 
@@ -288,5 +283,5 @@ static void update_firmware_task(void *pvParameter) {
 }
 
 void update_firmware() {
-
+   xTaskCreate(&update_firmware_task, "update_firmware_task", 8192, NULL, 5, NULL);
 }

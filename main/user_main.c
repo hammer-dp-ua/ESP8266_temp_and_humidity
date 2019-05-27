@@ -36,48 +36,6 @@ static EventGroupHandle_t general_event_group_g;
 
 static QueueHandle_t uart0_queue;
 
-/******************************************************************************
- * FunctionName : user_rf_cal_sector_set
- * Description  : SDK just reversed 4 sectors, used for rf init data and paramters.
- *                We add this function to force users to set rf cal sector, since
- *                we don't know which sector is free in user's application.
- *                sector map for last several sectors : ABCCC
- *                A : rf cal
- *                B : rf init data
- *                C : sdk parameters
- * Parameters   : none
- * Returns      : rf cal sector
- *******************************************************************************/
-unsigned int user_rf_cal_sector_set(void) {
-   flash_size_map size_map = system_get_flash_size_map();
-   unsigned int rf_cal_sec = 0;
-
-   switch (size_map) {
-      case FLASH_SIZE_4M_MAP_256_256:
-         rf_cal_sec = 128 - 5;
-         break;
-
-      case FLASH_SIZE_8M_MAP_512_512:
-         rf_cal_sec = 256 - 5;
-         break;
-
-      case FLASH_SIZE_16M_MAP_512_512:
-      case FLASH_SIZE_16M_MAP_1024_1024:
-         rf_cal_sec = 512 - 5;
-         break;
-
-      case FLASH_SIZE_32M_MAP_512_512:
-      case FLASH_SIZE_32M_MAP_1024_1024:
-         rf_cal_sec = 1024 - 5;
-         break;
-
-      default:
-         rf_cal_sec = 0;
-         break;
-   }
-   return rf_cal_sec;
-}
-
 static void milliseconds_counter() {
    milliseconds_counter_g++;
 }
@@ -129,12 +87,6 @@ void blink_leds_while_updating_task(void *pvParameters) {
       }
 
       vTaskDelay(100 / portTICK_RATE_MS);
-   }
-}
-
-void check_for_update_firmware(char *response) {
-   if (strstr(response, UPDATE_FIRMWARE) != NULL) {
-      xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
    }
 }
 
@@ -202,9 +154,9 @@ void check_for_update_firmware(char *response) {
 }*/
 
 void send_status_info_task(void *pvParameters) {
-   /*if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
+   if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       vTaskDelete(NULL);
-   }*/
+   }
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
@@ -315,6 +267,7 @@ void send_status_info_task(void *pvParameters) {
 
    if (response == NULL) {
       repetitive_request_errors_counter_g++;
+      gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
    } else {
       if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
          gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
@@ -322,8 +275,15 @@ void send_status_info_task(void *pvParameters) {
          #ifdef ALLOW_USE_PRINTF
          printf("\nResponse OK\n");
          #endif
+
+         if (strstr(response, UPDATE_FIRMWARE)) {
+            xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
+            xTaskCreate(blink_leds_while_updating_task, "blink_leds_while_updating_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+            update_firmware();
+         }
       } else {
          repetitive_request_errors_counter_g++;
+         gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
       }
 
       FREE(response, __LINE__);
@@ -526,14 +486,14 @@ static void testing_task(void *pvParameters) {
       esp_err_t i2c_result = sht21_get_temperature(&temp);
 
       #ifdef ALLOW_USE_PRINTF
-      printf("\nMeasured temp.: %d, I2C result: 0x%x\n", (int) (temp * 100), i2c_result);
+      printf("\nMeasured temp.: %d, I2C result: 0x%X\n", (int) (temp * 100), i2c_result);
       #endif
 
       float humidity;
       i2c_result = sht21_get_humidity(&humidity);
 
       #ifdef ALLOW_USE_PRINTF
-      printf("\nMeasured humidity: %d, I2C result: 0x%x\n", (int) (humidity * 100), i2c_result);
+      printf("\nMeasured humidity: %d, I2C result: 0x%X\n", (int) (humidity * 100), i2c_result);
       #endif
 
       vTaskDelay(3000 / portTICK_RATE_MS);
@@ -548,6 +508,12 @@ void app_main(void) {
    i2c_master_init();
 
    vTaskDelay(3000 / portTICK_RATE_MS);
+
+   #ifdef ALLOW_USE_PRINTF
+   const esp_partition_t *running = esp_ota_get_running_partition();
+   printf("\nRunning partition type: %d, subtype: %d, size: 0x%X, offset: 0x%X\n",
+         running->type, running->subtype, running->size, running->address);
+   #endif
 
    tcpip_adapter_init();
    tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // Stop DHCP client
@@ -572,6 +538,4 @@ void app_main(void) {
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
 
    start_100millisecons_counter();
-
-   update_firmware();
 }
