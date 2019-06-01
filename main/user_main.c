@@ -511,8 +511,8 @@ void app_main(void) {
 
    #ifdef ALLOW_USE_PRINTF
    const esp_partition_t *running = esp_ota_get_running_partition();
-   printf("\nRunning partition type: %d, subtype: %d, size: 0x%X, offset: 0x%X\n",
-         running->type, running->subtype, running->size, running->address);
+   printf("\nRunning partition type: %d, subtype: %d, offset: 0x%X, size: 0x%X\n",
+         running->type, running->subtype, running->address, running->size);
    #endif
 
    tcpip_adapter_init();
@@ -522,8 +522,6 @@ void app_main(void) {
    ip_info.gw.addr = inet_addr(OWN_GETAWAY_ADDRESS);
    ip_info.netmask.addr = inet_addr(OWN_NETMASK);
    tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info);
-
-   //ESP_LOGI(TAG, "Software is running from: %s\n", system_upgrade_userbin_check() ? "user2.bin" : "user1.bin");
 
    wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
@@ -536,6 +534,8 @@ void app_main(void) {
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
+
+   //schedule_sending_status_info(STATUS_REQUESTS_SEND_INTERVAL_MS);
 
    start_100millisecons_counter();
 }

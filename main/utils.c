@@ -190,7 +190,7 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          #endif
 
          on_wifi_disconnected();
-         //esp_wifi_connect();
+         esp_wifi_connect();
          on_wifi_connection();
          xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
          break;
@@ -225,8 +225,7 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
    #endif
 }
 
-bool is_connected_to_wifi()
-{
+bool is_connected_to_wifi() {
    return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) == WIFI_CONNECTED_BIT;
 }
 
