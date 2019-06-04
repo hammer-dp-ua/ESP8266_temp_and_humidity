@@ -163,6 +163,33 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
       case SYSTEM_EVENT_STA_START:
          esp_wifi_connect();
          on_wifi_connection();
+
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nSYSTEM_EVENT_STA_START event\n");
+         /*wifi_scan_config_t scan_config;
+         scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
+         scan_config.scan_time.passive = 1500;
+         scan_config.scan_time.active.min = 500;
+         scan_config.scan_time.active.max = 1500;
+         esp_wifi_scan_start(&scan_config, false);*/
+         #endif
+         break;
+      case SYSTEM_EVENT_SCAN_DONE:
+         #ifdef ALLOW_USE_PRINTF
+         printf("\nScan status: %u, number: %u, scan id: %u",
+               event->event_info.scan_done.status, event->event_info.scan_done.number, event->event_info.scan_done.scan_id);
+
+         unsigned short number = 10;
+         wifi_ap_record_t ap_records[10];
+
+         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_records));
+         printf("\nScanned %u access points", number);
+         for (unsigned char i = 0; i < number; i++) {
+            printf("\nScan index: %u, ssid: %s, rssi: %d", i, ap_records[i].ssid, ap_records[i].rssi);
+         }
+         printf("\n");
+         #endif
+
          break;
       case SYSTEM_EVENT_STA_GOT_IP:
          #ifdef ALLOW_USE_PRINTF
@@ -186,11 +213,12 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          break;
       case SYSTEM_EVENT_STA_DISCONNECTED:
          #ifdef ALLOW_USE_PRINTF
-         printf("\nDisconnected from %s\n", ACCESS_POINT_NAME);
+         // See reason info in wifi_err_reason_t of esp_wifi_types.h
+         printf("\nDisconnected from %s, reason: %u\n", event->event_info.disconnected.ssid, event->event_info.disconnected.reason);
          #endif
 
          on_wifi_disconnected();
-         esp_wifi_connect();
+         //esp_wifi_connect();
          on_wifi_connection();
          xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
          break;
@@ -223,6 +251,13 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
    #ifdef ALLOW_USE_PRINTF
    printf("\nwifi_init_sta finished\n");
    #endif
+
+   /*#ifdef ALLOW_USE_PRINTF
+   wifi_scan_config_t scan_config;
+
+   esp_wifi_scan_start(&scan_config, true);
+   esp_wifi_scan_get_ap_records
+   #endif*/
 }
 
 bool is_connected_to_wifi() {

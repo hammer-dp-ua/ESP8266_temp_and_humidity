@@ -292,14 +292,44 @@ void send_status_info_task(void *pvParameters) {
    vTaskDelete(NULL);
 }
 
-void send_status_info() {
+static void blink_on_send(gpio_num_t pin) {
+   int initial_pin_state = gpio_get_level(pin);
+   unsigned char i;
+
+   for (i = 0; i < 4; i++) {
+      bool set_pin = initial_pin_state == 1 ? i % 2 == 1 : i % 2 == 0;
+
+      if (set_pin) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+      vTaskDelay(100 / portTICK_RATE_MS);
+   }
+
+   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
+      if (is_connected_to_wifi()) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+   }
+}
+
+void blink_on_send_status_info_task(void *pvParameters) {
+   blink_on_send(SERVER_AVAILABILITY_STATUS_LED_PIN);
+   vTaskDelete(NULL);
+}
+
+static void send_status_info() {
+   xTaskCreate(blink_on_send_status_info_task, "blink_on_send_status_info_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
    xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
 void schedule_sending_status_info(unsigned int timeout_ms) {
    os_timer_disarm(&status_sender_timer_g);
    os_timer_setfn(&status_sender_timer_g, (os_timer_func_t *) send_status_info, NULL);
-   os_timer_arm(&status_sender_timer_g, timeout_ms, false);
+   os_timer_arm(&status_sender_timer_g, timeout_ms, true);
 }
 
 void pins_config() {
@@ -388,30 +418,6 @@ static void on_wifi_connected() {
 
 static void on_wifi_disconnected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
-}
-
-static void blink_on_send(gpio_num_t pin) {
-   int initial_pin_state = gpio_get_level(pin);
-   unsigned char i;
-
-   for (i = 0; i < 4; i++) {
-      bool set_pin = initial_pin_state == 1 ? i % 2 == 1 : i % 2 == 0;
-
-      if (set_pin) {
-         gpio_set_level(pin, 1);
-      } else {
-         gpio_set_level(pin, 0);
-      }
-      vTaskDelay(100 / portTICK_RATE_MS);
-   }
-
-   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
-      if (is_connected_to_wifi()) {
-         gpio_set_level(pin, 1);
-      } else {
-         gpio_set_level(pin, 0);
-      }
-   }
 }
 
 static void blink_on_wifi_connection_task(void *pvParameters) {
@@ -535,7 +541,7 @@ void app_main(void) {
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
 
-   //schedule_sending_status_info(STATUS_REQUESTS_SEND_INTERVAL_MS);
+   schedule_sending_status_info(STATUS_REQUESTS_SEND_INTERVAL_MS);
 
    start_100millisecons_counter();
 }

@@ -1807,7 +1807,7 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -1893,7 +1893,7 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -1979,7 +1979,7 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -2065,7 +2065,7 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -2151,7 +2151,7 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
