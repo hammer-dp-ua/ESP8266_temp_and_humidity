@@ -180,19 +180,30 @@ static void update_firmware_task(void *pvParameter) {
    esp_ota_handle_t update_handle = 0;
    const esp_partition_t *update_partition = NULL;
 
-   ESP_LOGI(TAG, "Starting OTA... @ %p flash %s", update_firmware_task, CONFIG_ESPTOOLPY_FLASHSIZE);
+   ESP_LOGI(TAG, "Starting OTA... Flash: %s", CONFIG_ESPTOOLPY_FLASHSIZE);
 
-   const esp_partition_t *configured = esp_ota_get_boot_partition();
+   /*const esp_partition_t *configured = esp_ota_get_boot_partition();
+   assert(configured != NULL);
    const esp_partition_t *running = esp_ota_get_running_partition();
+   assert(running != NULL);
 
    if (configured != running) {
-      ESP_LOGW(TAG, "Configured OTA boot partition at offset 0x%X, but running from offset 0x%X", configured->address, running->address);
-      ESP_LOGW(TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
+      ESP_LOGI(TAG, "Configured OTA boot partition at offset 0x%X, but running from offset 0x%X", configured->address, running->address);
+      ESP_LOGI(TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
    }
-   ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%X)", running->type, running->subtype, running->address);
+   ESP_LOGI(TAG, "Running partition type 0x%X subtype 0x%X (offset 0x%X)", running->type, running->subtype, running->address);*/
 
    const char *request_parameters[] = {"firmware.bin", SERVER_IP_ADDRESS, NULL};
    char *http_request = set_string_parameters(FIRMWARE_UPDATE_GET_REQUEST, request_parameters);
+   ESP_LOGI(TAG, "GET HTTP request: %s", http_request);
+   socket_id = connect_to_http_server();
+
+   if (socket_id == -1) {
+      free(http_request);
+      ESP_LOGE(TAG, "Error on server connection for updating");
+      return;
+   }
+
    int res = send(socket_id, http_request, strlen(http_request), 0);
 
    free(http_request);
@@ -205,8 +216,8 @@ static void update_firmware_task(void *pvParameter) {
    }
 
    update_partition = esp_ota_get_next_update_partition(NULL);
-   ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%X", update_partition->subtype, update_partition->address);
    assert(update_partition != NULL);
+   ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%X", update_partition->subtype, update_partition->address);
 
    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
 
@@ -249,7 +260,7 @@ static void update_firmware_task(void *pvParameter) {
          }
 
          binary_file_length += buff_len;
-         ESP_LOGI(TAG, "Have written image length %d", binary_file_length);
+         //ESP_LOGI(TAG, "Have written image length %d", binary_file_length);
       } else if (buff_len == 0) { // packet over
          flag = false;
          ESP_LOGI(TAG, "Connection closed, all packets received");
@@ -279,9 +290,8 @@ static void update_firmware_task(void *pvParameter) {
 
    ESP_LOGI(TAG, "Prepare to restart system!");
    esp_restart();
-   return;
 }
 
 void update_firmware() {
-   xTaskCreate(&update_firmware_task, "update_firmware_task", 8192, NULL, 5, NULL);
+   xTaskCreate(update_firmware_task, "update_firmware_task", configMINIMAL_STACK_SIZE * 7, NULL, 5, NULL);
 }

@@ -153,10 +153,36 @@ void blink_leds_while_updating_task(void *pvParameters) {
    FREE(update);
 }*/
 
+static void blink_on_send(gpio_num_t pin) {
+   int initial_pin_state = gpio_get_level(pin);
+   unsigned char i;
+
+   for (i = 0; i < 4; i++) {
+      bool set_pin = initial_pin_state == 1 ? i % 2 == 1 : i % 2 == 0;
+
+      if (set_pin) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+      vTaskDelay(100 / portTICK_RATE_MS);
+   }
+
+   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
+      if (is_connected_to_wifi()) {
+         gpio_set_level(pin, 1);
+      } else {
+         gpio_set_level(pin, 0);
+      }
+   }
+}
+
 void send_status_info_task(void *pvParameters) {
    if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       vTaskDelete(NULL);
    }
+
+   blink_on_send(SERVER_AVAILABILITY_STATUS_LED_PIN);
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
@@ -280,6 +306,9 @@ void send_status_info_task(void *pvParameters) {
             xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
             xTaskCreate(blink_leds_while_updating_task, "blink_leds_while_updating_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
             update_firmware();
+            // If we got here - some error occurred
+            //xEventGroupClearBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
+            //vTaskDelete(blink_leds_while_updating_task);
          }
       } else {
          repetitive_request_errors_counter_g++;
@@ -292,37 +321,7 @@ void send_status_info_task(void *pvParameters) {
    vTaskDelete(NULL);
 }
 
-static void blink_on_send(gpio_num_t pin) {
-   int initial_pin_state = gpio_get_level(pin);
-   unsigned char i;
-
-   for (i = 0; i < 4; i++) {
-      bool set_pin = initial_pin_state == 1 ? i % 2 == 1 : i % 2 == 0;
-
-      if (set_pin) {
-         gpio_set_level(pin, 1);
-      } else {
-         gpio_set_level(pin, 0);
-      }
-      vTaskDelay(100 / portTICK_RATE_MS);
-   }
-
-   if (pin == AP_CONNECTION_STATUS_LED_PIN) {
-      if (is_connected_to_wifi()) {
-         gpio_set_level(pin, 1);
-      } else {
-         gpio_set_level(pin, 0);
-      }
-   }
-}
-
-void blink_on_send_status_info_task(void *pvParameters) {
-   blink_on_send(SERVER_AVAILABILITY_STATUS_LED_PIN);
-   vTaskDelete(NULL);
-}
-
 static void send_status_info() {
-   xTaskCreate(blink_on_send_status_info_task, "blink_on_send_status_info_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
    xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
@@ -517,8 +516,8 @@ void app_main(void) {
 
    #ifdef ALLOW_USE_PRINTF
    const esp_partition_t *running = esp_ota_get_running_partition();
-   printf("\nRunning partition type: %d, subtype: %d, offset: 0x%X, size: 0x%X\n",
-         running->type, running->subtype, running->address, running->size);
+   printf("\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n",
+         running->label, running->type, running->subtype, running->address, running->size);
    #endif
 
    tcpip_adapter_init();

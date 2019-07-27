@@ -3,7 +3,7 @@
 static const char FAILED_TO_ALLOCATE_SOCKET_MSG[] = "\nFailed to allocate socket\n";
 static const char ALLOCATED_SOCKET_MSG[] = "\nSocket %d has been allocated\n";
 static const char SOCKET_CONNECTION_ERROR_MSG[] = "\nSocket connection failed. Error: %d\n";
-static const char SOCKET_CONNECTED_ERROR_MSG[] = "\nSocket %d has been connected\n";
+static const char SOCKET_CONNECTED_MSG[] = "\nSocket %d has been connected\n";
 static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To be deleted task\n";
 static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
 static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
@@ -352,18 +352,18 @@ bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length) {
    return true;
 }
 
-char *send_request(char *request, unsigned short response_buffer_size, unsigned int invocation_time) {
-   int socket_result = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
+int connect_to_http_server() {
+   int socket_id = socket(AF_INET, SOCK_STREAM, IPPROTO_IP); // SOCK_STREAM - TCP
 
-   if(socket_result < 0) {
+   if (socket_id < 0) {
       #ifdef ALLOW_USE_PRINTF
       printf(FAILED_TO_ALLOCATE_SOCKET_MSG);
       #endif
 
-      return NULL;
+      return -1;
    }
    #ifdef ALLOW_USE_PRINTF
-   printf(ALLOCATED_SOCKET_MSG, socket_result);
+   printf(ALLOCATED_SOCKET_MSG, socket_id);
    #endif
 
    struct sockaddr_in destination_address;
@@ -371,19 +371,19 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
    destination_address.sin_family = AF_INET;
    destination_address.sin_port = htons(SERVER_PORT);
 
-   int connection_result = connect(socket_result, (struct sockaddr *) &destination_address, sizeof(destination_address));
+   int connection_result = connect(socket_id, (struct sockaddr *) &destination_address, sizeof(destination_address));
 
-   if(connection_result != 0) {
+   if (connection_result != 0) {
       #ifdef ALLOW_USE_PRINTF
       printf(SOCKET_CONNECTION_ERROR_MSG, connection_result);
       #endif
 
-      close(socket_result);
-      return NULL;
+      close(socket_id);
+      return -1;
    }
 
    #ifdef ALLOW_USE_PRINTF
-   printf(SOCKET_CONNECTED_ERROR_MSG, socket_result);
+   printf(SOCKET_CONNECTED_MSG, socket_id);
    #endif
 
    if (!is_connected_to_wifi()) {
@@ -391,15 +391,24 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
       printf(NOT_CONNECTED_TO_WI_FI_MSG);
       #endif
 
-      close(socket_result);
+      close(socket_id);
+      return -1;
+   }
+   return socket_id;
+}
+
+char *send_request(char *request, unsigned short response_buffer_size, unsigned int invocation_time) {
+   int socket_id = connect_to_http_server();
+
+   if (socket_id < 0) {
       return NULL;
    }
 
    unsigned short received_bytes_amount = 0;
    char *final_response_result = MALLOC(response_buffer_size, __LINE__, invocation_time);
 
-   for(;;) {
-      int send_result = send(socket_result, request, strlen(request), 0);
+   for (;;) {
+      int send_result = send(socket_id, request, strlen(request), 0);
 
       if (send_result < 0) {
          #ifdef ALLOW_USE_PRINTF
@@ -409,12 +418,12 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
          break;
       }
       #ifdef ALLOW_USE_PRINTF
-      printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_result);
+      printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_id);
       #endif
 
       unsigned char tmp_buffer_size = response_buffer_size <= 255 ? response_buffer_size : 255;
       char tmp_buffer[tmp_buffer_size];
-      int len = recv(socket_result, tmp_buffer, tmp_buffer_size - 1, 0);
+      int len = recv(socket_id, tmp_buffer, tmp_buffer_size - 1, 0);
       tmp_buffer[len] = '\0';
 
       if (len < 0) {
@@ -458,8 +467,8 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
    printf(SHUTTING_DOWN_SOCKET_MSG);
    #endif
 
-   shutdown(socket_result, 0);
-   close(socket_result);
+   shutdown(socket_id, 0);
+   close(socket_id);
 
    return final_response_result;
 }
