@@ -9,16 +9,15 @@ static int binary_file_length = 0;
 // socket id
 static int socket_id = -1;
 
-static const char TAG[] = "Temp. and humidity";
-
 static void __attribute__((noreturn)) task_fatal_error() {
-   ESP_LOGE(TAG, "Exiting task due to fatal error...");
+   #ifdef ALLOW_USE_PRINTF
+   printf("Exiting task due to fatal error...");
+   #endif
+
    close(socket_id);
    (void)vTaskDelete(NULL);
 
-   while (1) {
-     ;
-   }
+   while (1) {}
 }
 
 static void esp_ota_firm_init(esp_ota_firm_t *ota_firm, const esp_partition_t *update_partition) {
@@ -28,7 +27,9 @@ static void esp_ota_firm_init(esp_ota_firm_t *ota_firm, const esp_partition_t *u
    ota_firm->ota_num = get_ota_partition_count();
    ota_firm->update_ota_num = update_partition->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
 
-   ESP_LOGI(TAG, "Total OTA number %d update to %d part", ota_firm->ota_num, ota_firm->update_ota_num);
+   #ifdef ALLOW_USE_PRINTF
+   printf("Total OTA number %d update to %d part", ota_firm->ota_num, ota_firm->update_ota_num);
+   #endif
 }
 
 // Read buffer by byte still delim, return read bytes counts
@@ -41,14 +42,16 @@ static int read_until(const char *buffer, char delim, int len) {
    return i + 1;
 }
 
-bool _esp_ota_firm_parse_http(esp_ota_firm_t *ota_firm, const char *text, size_t total_len, size_t *parse_len) {
+static bool _esp_ota_firm_parse_http(esp_ota_firm_t *ota_firm, const char *text, size_t total_len, size_t *parse_len) {
    // i means current position
    int i = 0, i_read_len = 0;
    char *ptr = NULL, *ptr2 = NULL;
    char length_str[32];
 
    while (text[i] != 0 && i < total_len) {
-      if (ota_firm->content_len == 0 && (ptr = (char *) strstr(text, "Content-Length")) != NULL) {
+      ptr = (char *) strstr(text, "Content-Length");
+
+      if (ota_firm->content_len == 0 && ptr != NULL) {
          ptr += 16;
          ptr2 = (char *) strstr(ptr, "\r\n");
 
@@ -60,20 +63,28 @@ bool _esp_ota_firm_parse_http(esp_ota_firm_t *ota_firm, const char *text, size_t
          ota_firm->ota_size = ota_firm->content_len;
          ota_firm->ota_offset = 0;
 
-         ESP_LOGI(TAG, "Parse Content-Length: %d, ota_size %d", ota_firm->content_len, ota_firm->ota_size);
+         #ifdef ALLOW_USE_PRINTF
+         printf("Parse Content-Length: %d, ota_size %d", ota_firm->content_len, ota_firm->ota_size);
+         #endif
       }
 
       i_read_len = read_until(&text[i], '\n', total_len - i);
 
       if (i_read_len > total_len - i) {
-         ESP_LOGE(TAG, "recv malformed HTTP header");
+         #ifdef ALLOW_USE_PRINTF
+         printf("recv. malformed HTTP header");
+         #endif
+
          task_fatal_error();
       }
 
       // if resolve \r\n line, HTTP header is finished
       if (i_read_len == 2) {
          if (ota_firm->content_len == 0) {
-            ESP_LOGE(TAG, "Did not parse Content-Length item");
+            #ifdef ALLOW_USE_PRINTF
+            printf("Did not parse Content-Length item");
+            #endif
+
             task_fatal_error();
          }
 
@@ -95,7 +106,11 @@ static size_t esp_ota_firm_do_parse_msg(esp_ota_firm_t *ota_firm, const char *in
       case ESP_OTA_INIT:
          if (_esp_ota_firm_parse_http(ota_firm, in_buf, in_len, &tmp)) {
             ota_firm->state = ESP_OTA_PREPARE;
-            ESP_LOGD(TAG, "HTTP parse %d bytes", tmp);
+
+            #ifdef ALLOW_USE_PRINTF
+            printf("HTTP parsed %d bytes", tmp);
+            #endif
+
             parsed_bytes = tmp;
          }
 
@@ -108,8 +123,11 @@ static size_t esp_ota_firm_do_parse_msg(esp_ota_firm_t *ota_firm, const char *in
             ota_firm->bytes = ota_firm->read_bytes - ota_firm->ota_offset;
             ota_firm->write_bytes += ota_firm->read_bytes - ota_firm->ota_offset;
             ota_firm->state = ESP_OTA_START;
-            ESP_LOGD(TAG, "Received %d bytes and start to update", ota_firm->read_bytes);
-            ESP_LOGD(TAG, "Write %d total %d", ota_firm->bytes, ota_firm->write_bytes);
+
+            #ifdef ALLOW_USE_PRINTF
+            printf("Received %d bytes and start to update", ota_firm->read_bytes);
+            printf("Write %d total %d", ota_firm->bytes, ota_firm->write_bytes);
+            #endif
          }
 
          break;
@@ -124,7 +142,9 @@ static size_t esp_ota_firm_do_parse_msg(esp_ota_firm_t *ota_firm, const char *in
          ota_firm->buf = in_buf;
          ota_firm->write_bytes += ota_firm->bytes;
 
-         ESP_LOGD(TAG, "Write %d total %d", ota_firm->bytes, ota_firm->write_bytes);
+         #ifdef ALLOW_USE_PRINTF
+         printf("Write %d total %d", ota_firm->bytes, ota_firm->write_bytes);
+         #endif
 
          break;
       case ESP_OTA_RECVED:
@@ -134,7 +154,10 @@ static size_t esp_ota_firm_do_parse_msg(esp_ota_firm_t *ota_firm, const char *in
          break;
       default:
          parsed_bytes = 0;
-         ESP_LOGD(TAG, "State is %d", ota_firm->state);
+
+         #ifdef ALLOW_USE_PRINTF
+         printf("State is %d", ota_firm->state);
+         #endif
 
          break;
    }
@@ -145,12 +168,16 @@ static size_t esp_ota_firm_do_parse_msg(esp_ota_firm_t *ota_firm, const char *in
 static void esp_ota_firm_parse_msg(esp_ota_firm_t *ota_firm, const char *in_buf, size_t in_len) {
    size_t parse_bytes = 0;
 
-   ESP_LOGD(TAG, "Input %d bytes", in_len);
+   #ifdef ALLOW_USE_PRINTF
+   printf("Input %d bytes", in_len);
+   #endif
 
    do {
       size_t bytes = esp_ota_firm_do_parse_msg(ota_firm, in_buf + parse_bytes, in_len - parse_bytes);
 
-      ESP_LOGD(TAG, "Parse %d bytes", bytes);
+      #ifdef ALLOW_USE_PRINTF
+      printf("Parsed %d bytes", bytes);
+      #endif
 
       if (bytes) {
          parse_bytes += bytes;
@@ -180,7 +207,9 @@ static void update_firmware_task(void *pvParameter) {
    esp_ota_handle_t update_handle = 0;
    const esp_partition_t *update_partition = NULL;
 
-   ESP_LOGI(TAG, "Starting OTA... Flash: %s", CONFIG_ESPTOOLPY_FLASHSIZE);
+   #ifdef ALLOW_USE_PRINTF
+   printf("Starting OTA... Flash: %s", CONFIG_ESPTOOLPY_FLASHSIZE);
+   #endif
 
    /*const esp_partition_t *configured = esp_ota_get_boot_partition();
    assert(configured != NULL);
@@ -195,13 +224,21 @@ static void update_firmware_task(void *pvParameter) {
 
    const char *request_parameters[] = {"firmware.bin", SERVER_IP_ADDRESS, NULL};
    char *http_request = set_string_parameters(FIRMWARE_UPDATE_GET_REQUEST, request_parameters);
-   ESP_LOGI(TAG, "GET HTTP request: %s", http_request);
+
+   #ifdef ALLOW_USE_PRINTF
+   printf("GET HTTP request: %s", http_request);
+   #endif
+
    socket_id = connect_to_http_server();
 
    if (socket_id == -1) {
       free(http_request);
-      ESP_LOGE(TAG, "Error on server connection for updating");
-      return;
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("Error on server connection for updating");
+      #endif
+
+      task_fatal_error();
    }
 
    int res = send(socket_id, http_request, strlen(http_request), 0);
@@ -209,23 +246,36 @@ static void update_firmware_task(void *pvParameter) {
    free(http_request);
 
    if (res < 0) {
-      ESP_LOGE(TAG, "Send GET request to server failed");
+      #ifdef ALLOW_USE_PRINTF
+      printf("Send GET request to server failed");
+      #endif
+
       task_fatal_error();
    } else {
-      ESP_LOGI(TAG, "Send GET request to server succeeded");
+      #ifdef ALLOW_USE_PRINTF
+      printf("Send GET request to server succeeded");
+      #endif
    }
 
    update_partition = esp_ota_get_next_update_partition(NULL);
    assert(update_partition != NULL);
-   ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%X", update_partition->subtype, update_partition->address);
+
+   #ifdef ALLOW_USE_PRINTF
+   printf("Writing to partition subtype %d at offset 0x%X", update_partition->subtype, update_partition->address);
+   #endif
 
    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
 
    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "esp_ota_begin failed, error=%d", err);
+      #ifdef ALLOW_USE_PRINTF
+      printf("esp_ota_begin failed, error=%d", err);
+      #endif
+
       task_fatal_error();
    }
-   ESP_LOGI(TAG, "esp_ota_begin succeeded");
+   #ifdef ALLOW_USE_PRINTF
+   printf("esp_ota_begin succeeded");
+   #endif
 
    bool flag = true;
    esp_ota_firm_t ota_firm;
@@ -240,7 +290,10 @@ static void update_firmware_task(void *pvParameter) {
       int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
 
       if (buff_len < 0) { // receive error
-         ESP_LOGE(TAG, "Error: receive data error! Error no.=%d", errno);
+         #ifdef ALLOW_USE_PRINTF
+         printf("Error: receive data error! Error no.=%d", errno);
+         #endif
+
          task_fatal_error();
       } else if (buff_len > 0) { // deal with response body
          esp_ota_firm_parse_msg(&ota_firm, text, buff_len);
@@ -255,7 +308,10 @@ static void update_firmware_task(void *pvParameter) {
          err = esp_ota_write(update_handle, (const void *) ota_write_data, buff_len);
 
          if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Error: esp_ota_write failed! err=0x%X", err);
+            #ifdef ALLOW_USE_PRINTF
+            printf("Error: esp_ota_write failed! err=0x%X", err);
+            #endif
+
             task_fatal_error();
          }
 
@@ -263,10 +319,16 @@ static void update_firmware_task(void *pvParameter) {
          //ESP_LOGI(TAG, "Have written image length %d", binary_file_length);
       } else if (buff_len == 0) { // packet over
          flag = false;
-         ESP_LOGI(TAG, "Connection closed, all packets received");
+
+         #ifdef ALLOW_USE_PRINTF
+         printf("Connection closed, all packets received");
+         #endif
+
          close(socket_id);
       } else {
-         ESP_LOGE(TAG, "Unexpected recv result");
+         #ifdef ALLOW_USE_PRINTF
+         printf("Unexpected recv. result");
+         #endif
       }
 
       if (esp_ota_firm_is_finished(&ota_firm)) {
@@ -274,21 +336,32 @@ static void update_firmware_task(void *pvParameter) {
       }
    }
 
-   ESP_LOGI(TAG, "Total Write binary data length : %d", binary_file_length);
+   #ifdef ALLOW_USE_PRINTF
+   printf("Total write binary data length : %d", binary_file_length);
+   #endif
 
    if (esp_ota_end(update_handle) != ESP_OK) {
-      ESP_LOGE(TAG, "esp_ota_end failed!");
+      #ifdef ALLOW_USE_PRINTF
+      printf("esp_ota_end failed!");
+      #endif
+
       task_fatal_error();
    }
 
    err = esp_ota_set_boot_partition(update_partition);
 
    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "esp_ota_set_boot_partition failed! err=0x%X", err);
+      #ifdef ALLOW_USE_PRINTF
+      printf("esp_ota_set_boot_partition failed! err=0x%X", err);
+      #endif
+
       task_fatal_error();
    }
 
-   ESP_LOGI(TAG, "Prepare to restart system!");
+   #ifdef ALLOW_USE_PRINTF
+   printf("Prepare to restart system!");
+   #endif
+
    esp_restart();
 }
 

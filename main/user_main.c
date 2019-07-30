@@ -127,32 +127,6 @@ void blink_leds_while_updating_task(void *pvParameters) {
    system_upgrade_start(upgrade_server);
 }*/
 
-/*void ota_finished_callback(void *arg) {
-   struct upgrade_server_info *update = arg;
-
-   if (update->upgrade_flag == true) {
-      #ifdef ALLOW_USE_PRINTF
-      printf("[OTA] success; rebooting! Time: %u\n", milliseconds_counter_g);
-      #endif
-
-      SYSTEM_RESTART_REASON_TYPE reason = SOFTWARE_UPGRADE;
-      rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
-
-      system_upgrade_flag_set(UPGRADE_FLAG_FINISH);
-      system_upgrade_reboot();
-   } else {
-      #ifdef ALLOW_USE_PRINTF
-      printf("[OTA] failed! Time: %u\n", milliseconds_counter_g);
-      #endif
-
-      system_restart();
-   }
-
-   FREE(&update->sockaddrin);
-   FREE(update->url);
-   FREE(update);
-}*/
-
 static void blink_on_send(gpio_num_t pin) {
    int initial_pin_state = gpio_get_level(pin);
    unsigned char i;
@@ -305,6 +279,10 @@ void send_status_info_task(void *pvParameters) {
          if (strstr(response, UPDATE_FIRMWARE)) {
             xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
             xTaskCreate(blink_leds_while_updating_task, "blink_leds_while_updating_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+
+            SYSTEM_RESTART_REASON_TYPE reason = SOFTWARE_UPGRADE;
+            rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
+
             update_firmware();
             // If we got here - some error occurred
             //xEventGroupClearBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);

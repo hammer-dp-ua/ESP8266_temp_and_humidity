@@ -1,5 +1,4 @@
 #include "esp_ota_ops.h"
-#include "esp_log.h"
 #include "global_definitions.h"
 #include "sdkconfig.h"
 #include "esp_system.h"
