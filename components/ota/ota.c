@@ -9,13 +9,15 @@ static int binary_file_length = 0;
 // socket id
 static int socket_id = -1;
 
+static os_timer_t upgrade_timer;
+
 static void __attribute__((noreturn)) task_fatal_error() {
    #ifdef ALLOW_USE_PRINTF
    printf("Exiting task due to fatal error...");
    #endif
 
    close(socket_id);
-   (void)vTaskDelete(NULL);
+   (void) vTaskDelete(NULL);
 
    while (1) {}
 }
@@ -365,6 +367,18 @@ static void update_firmware_task(void *pvParameter) {
    esp_restart();
 }
 
+static void on_update_timeout() {
+   #ifdef ALLOW_USE_PRINTF
+   printf("Update timeout");
+   #endif
+
+   esp_restart();
+}
+
 void update_firmware() {
+   os_timer_disarm(&upgrade_timer);
+   os_timer_setfn(&upgrade_timer, (os_timer_func_t *) on_update_timeout, NULL);
+   os_timer_arm(&upgrade_timer, 300000, false);
+
    xTaskCreate(update_firmware_task, "update_firmware_task", configMINIMAL_STACK_SIZE * 7, NULL, 5, NULL);
 }

@@ -34,9 +34,10 @@
 #define I2C_MASTER_NUM     I2C_NUM_0 // I2C port number for master dev
 
 #define SERVER_IS_AVAILABLE_FLAG
-#define UPDATE_FIRMWARE_FLAG                       (1 << 1)
+#define FIRST_STATUS_INFO_SENT_FLAG (1 << 0)
+#define UPDATE_FIRMWARE_FLAG        (1 << 1)
+#define CONNECTED_TO_AP_FLAG        (1 << 2)
 #define REQUEST_ERROR_OCCURRED_FLAG
-#define FIRST_STATUS_INFO_SENT_FLAG                (1 << 0)
 
 #define REQUEST_IDLE_TIME_ON_ERROR        (10000 / portTICK_RATE_MS) // 10 sec
 #define REQUEST_MAX_DURATION_TIME         (10000 / portTICK_RATE_MS) // 10 sec
@@ -61,6 +62,12 @@ typedef enum {
    SOFTWARE_UPGRADE
 } SYSTEM_RESTART_REASON_TYPE;
 
+const char SEND_STATUS_INFO_TASK_NAME[] = "send_status_info_task";
+const char BLINK_ON_WIFI_CONNECTION_TASK_NAME[] = "blink_on_wifi_connection_task";
+const char SCAN_ACCESS_POINT_TASK_NAME[] = "scan_access_point_task";
+const char BLINK_LEDS_WHILE_UPDATING_TASK_NAME[] = "blink_leds_while_updating_task";
+const char UART_EVENT_TASK_NAME[] = "uart_event_task";
+
 const char RESPONSE_SERVER_SENT_OK[] = "\"statusCode\":\"OK\"";
 const char STATUS_INFO_POST_REQUEST[] =
       "POST /server/esp8266/statusInfo HTTP/1.1\r\n"
@@ -83,9 +90,9 @@ const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"systemRestartReason\":\"<9>\"}";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 
-void pins_config();
+static void pins_config();
 static void uart_config();
-void scan_access_point_task(void *pvParameters);
+static void scan_access_point_task(void *pvParameters);
 void send_long_polling_requests_task(void *pvParameters);
 void autoconnect_task(void *pvParameters);
 void send_status_info_request_task(void *pvParameters);
@@ -102,7 +109,7 @@ void stop_ignoring_alarms_timer_callback();
 void stop_ignoring_false_alarms_timer_callback();
 void recheck_false_alarm_callback();
 void disconnect_connection_task(void *pvParameters);
-void schedule_sending_status_info();
+static void schedule_sending_status_info();
 bool check_to_continue();
 
 #endif

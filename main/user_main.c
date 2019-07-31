@@ -17,15 +17,17 @@ static const char CONNECTION_ERRORS_AMOUNT_MSG[] = "\nAP connection errors amoun
 static const char AP_SIGNAL_STRENGTH_MSG[] = "\nSignal strength of AP: %d\n";
 static const char REQUEST_PAYLOAD_CONTENT_MSG[] = "\nRequest payload: %s\n";
 static const char CREATED_REQUEST_CONTENT_MSG[] = "\nCreated request: %s\n";
+static const char CURRENT_PARTITION_MSG[] = "\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n";
+static const char RESPONSE_OK_MSG[] = "\nResponse OK\n";
 #endif
 
-unsigned int milliseconds_counter_g;
-int signal_strength_g;
-unsigned short errors_counter_g;
-unsigned short repetitive_request_errors_counter_g = 0;
-unsigned char pending_connection_errors_counter_g;
-unsigned int repetitive_ap_connecting_errors_counter_g;
-int connection_error_code_g;
+static unsigned int milliseconds_counter_g;
+static int signal_strength_g;
+static unsigned short errors_counter_g;
+static unsigned short repetitive_request_errors_counter_g = 0;
+static unsigned char pending_connection_errors_counter_g;
+static unsigned int repetitive_ap_connecting_errors_counter_g;
+static int connection_error_code_g;
 
 static os_timer_t millisecons_time_serv_g;
 static os_timer_t status_sender_timer_g;
@@ -50,7 +52,7 @@ void stop_milliseconds_counter() {
    os_timer_disarm(&millisecons_time_serv_g);
 }
 
-void scan_access_point_task(void *pvParameters) {
+static void scan_access_point_task(void *pvParameters) {
    long rescan_when_connected_task_delay = 10 * 60 * 1000 / portTICK_RATE_MS; // 10 mins
    long rescan_when_not_connected_task_delay = 10 * 1000 / portTICK_RATE_MS; // 10 secs
    wifi_scan_config_t scan_config;
@@ -61,7 +63,8 @@ void scan_access_point_task(void *pvParameters) {
    scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
 
    for (;;) {
-      if (esp_wifi_scan_start(&scan_config, true) == ESP_OK &&
+      if ((xEventGroupGetBits(general_event_group_g) & CONNECTED_TO_AP_FLAG) == CONNECTED_TO_AP_FLAG &&
+            esp_wifi_scan_start(&scan_config, true) == ESP_OK &&
             esp_wifi_scan_get_ap_records(&scanned_access_points_amount, scanned_access_points) == ESP_OK) {
          signal_strength_g = scanned_access_points[0].rssi;
 
@@ -90,43 +93,6 @@ void blink_leds_while_updating_task(void *pvParameters) {
    }
 }
 
-/*void upgrade_firmware() {
-   #ifdef ALLOW_USE_PRINTF
-   printf("\nUpdating firmware... Time: %u\n", milliseconds_counter_g);
-   #endif
-
-   turn_motion_sensors_off();
-   ETS_UART_INTR_DISABLE(); // To not receive data from UART RX
-
-   xTaskCreate(blink_leds_while_updating_task, "blink_leds_while_updating_task", 256, NULL, 1, NULL);
-
-   struct upgrade_server_info *upgrade_server =
-         (struct upgrade_server_info *) ZALLOC(sizeof(struct upgrade_server_info), __LINE__, milliseconds_counter_g);
-   struct sockaddr_in *sockaddrin = (struct sockaddr_in *) ZALLOC(sizeof(struct sockaddr_in), __LINE__, milliseconds_counter_g);
-
-   upgrade_server->sockaddrin = *sockaddrin;
-   upgrade_server->sockaddrin.sin_family = AF_INET;
-   struct in_addr sin_addr;
-   char *server_ip = get_string_from_rom(SERVER_IP_ADDRESS);
-   sin_addr.s_addr = inet_addr(server_ip);
-   upgrade_server->sockaddrin.sin_addr = sin_addr;
-   upgrade_server->sockaddrin.sin_port = htons(SERVER_PORT);
-   upgrade_server->sockaddrin.sin_len = sizeof(upgrade_server->sockaddrin);
-   upgrade_server->check_cb = ota_finished_callback;
-   upgrade_server->check_times = 10;
-
-   char *url_pattern = get_string_from_rom(FIRMWARE_UPDATE_GET_REQUEST);
-   unsigned char user_bin = system_upgrade_userbin_check();
-   char *file_to_download = user_bin == UPGRADE_FW_BIN1 ? "user2.bin" : "user1.bin";
-   char *url_parameters[] = {file_to_download, server_ip, NULL};
-   char *url = set_string_parameters(url_pattern, url_parameters);
-
-   FREE(url_pattern);
-   FREE(server_ip);
-   upgrade_server->url = url;
-   system_upgrade_start(upgrade_server);
-}*/
-
 static void blink_on_send(gpio_num_t pin) {
    int initial_pin_state = gpio_get_level(pin);
    unsigned char i;
@@ -152,10 +118,6 @@ static void blink_on_send(gpio_num_t pin) {
 }
 
 void send_status_info_task(void *pvParameters) {
-   if ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
-      vTaskDelete(NULL);
-   }
-
    blink_on_send(SERVER_AVAILABILITY_STATUS_LED_PIN);
 
    char signal_strength[5];
@@ -272,21 +234,22 @@ void send_status_info_task(void *pvParameters) {
       if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
          gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
 
+         if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
+            xEventGroupSetBits(general_event_group_g, FIRST_STATUS_INFO_SENT_FLAG);
+         }
+
          #ifdef ALLOW_USE_PRINTF
-         printf("\nResponse OK\n");
+         printf(RESPONSE_OK_MSG);
          #endif
 
          if (strstr(response, UPDATE_FIRMWARE)) {
             xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
-            xTaskCreate(blink_leds_while_updating_task, "blink_leds_while_updating_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+            xTaskCreate(blink_leds_while_updating_task, BLINK_LEDS_WHILE_UPDATING_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
             SYSTEM_RESTART_REASON_TYPE reason = SOFTWARE_UPGRADE;
             rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
 
             update_firmware();
-            // If we got here - some error occurred
-            //xEventGroupClearBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
-            //vTaskDelete(blink_leds_while_updating_task);
          }
       } else {
          repetitive_request_errors_counter_g++;
@@ -300,16 +263,22 @@ void send_status_info_task(void *pvParameters) {
 }
 
 static void send_status_info() {
-   xTaskCreate(send_status_info_task, "send_status_info_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
+   if (xTaskGetHandle(SEND_STATUS_INFO_TASK_NAME) != NULL ||
+         (xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG ||
+         (xEventGroupGetBits(general_event_group_g) & CONNECTED_TO_AP_FLAG) == 0) {
+      return;
+   }
+
+   xTaskCreate(send_status_info_task, SEND_STATUS_INFO_TASK_NAME, configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
-void schedule_sending_status_info(unsigned int timeout_ms) {
+static void schedule_sending_status_info(unsigned int timeout_ms) {
    os_timer_disarm(&status_sender_timer_g);
    os_timer_setfn(&status_sender_timer_g, (os_timer_func_t *) send_status_info, NULL);
    os_timer_arm(&status_sender_timer_g, timeout_ms, true);
 }
 
-void pins_config() {
+static void pins_config() {
    gpio_config_t output_pins;
    output_pins.mode = GPIO_MODE_OUTPUT;
    output_pins.pin_bit_mask = (1<<AP_CONNECTION_STATUS_LED_PIN) | (1<<SERVER_AVAILABILITY_STATUS_LED_PIN);
@@ -386,15 +355,16 @@ static void uart_event_task(void *pvParameters) {
 
 static void on_wifi_connected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
+   xEventGroupSetBits(general_event_group_g, CONNECTED_TO_AP_FLAG);
    repetitive_ap_connecting_errors_counter_g = 0;
 
-   if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
-      send_status_info();
-   }
+   send_status_info();
 }
 
 static void on_wifi_disconnected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
+   gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
+   xEventGroupClearBits(general_event_group_g, CONNECTED_TO_AP_FLAG);
 }
 
 static void blink_on_wifi_connection_task(void *pvParameters) {
@@ -403,7 +373,7 @@ static void blink_on_wifi_connection_task(void *pvParameters) {
 }
 
 static void blink_on_wifi_connection() {
-   xTaskCreate(blink_on_wifi_connection_task, "blink_on_wifi_connection_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   xTaskCreate(blink_on_wifi_connection_task, BLINK_ON_WIFI_CONNECTION_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
 
 static void uart_config() {
@@ -416,7 +386,7 @@ static void uart_config() {
    uart_param_config(UART_NUM_0, &uart_config);
 
    uart_driver_install(UART_NUM_0, UART_BUF_SIZE, 0, 10, &uart0_queue);
-   xTaskCreate(uart_event_task, "uart_event_task", configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
+   xTaskCreate(uart_event_task, UART_EVENT_TASK_NAME, configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 }
 
 /**
@@ -463,26 +433,6 @@ static esp_err_t i2c_master_init() {
    return ESP_OK;
 }
 
-static void testing_task(void *pvParameters) {
-   while(1) {
-      float temp;
-      esp_err_t i2c_result = sht21_get_temperature(&temp);
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\nMeasured temp.: %d, I2C result: 0x%X\n", (int) (temp * 100), i2c_result);
-      #endif
-
-      float humidity;
-      i2c_result = sht21_get_humidity(&humidity);
-
-      #ifdef ALLOW_USE_PRINTF
-      printf("\nMeasured humidity: %d, I2C result: 0x%X\n", (int) (humidity * 100), i2c_result);
-      #endif
-
-      vTaskDelay(3000 / portTICK_RATE_MS);
-   }
-}
-
 void app_main(void) {
    general_event_group_g = xEventGroupCreate();
 
@@ -494,8 +444,7 @@ void app_main(void) {
 
    #ifdef ALLOW_USE_PRINTF
    const esp_partition_t *running = esp_ota_get_running_partition();
-   printf("\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n",
-         running->label, running->type, running->subtype, running->address, running->size);
+   printf(CURRENT_PARTITION_MSG, running->label, running->type, running->subtype, running->address, running->size);
    #endif
 
    tcpip_adapter_init();
@@ -508,12 +457,7 @@ void app_main(void) {
 
    wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
-   //os_timer_setfn(&ap_autoconnect_timer_g, (os_timer_func_t *) ap_autoconnect, NULL);
-   //os_timer_arm(&ap_autoconnect_timer_g, AP_AUTOCONNECT_INTERVAL_MS, true);
-
-   //xTaskCreate(scan_access_point_task, "scan_access_point_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-
-   //xTaskCreate(testing_task, "testing_task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   xTaskCreate(scan_access_point_task, SCAN_ACCESS_POINT_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);
