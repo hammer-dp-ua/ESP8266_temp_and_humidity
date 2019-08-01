@@ -13,6 +13,7 @@ static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restart
 // FreeRTOS event group to signal when we are connected
 // Max 24 bits when configUSE_16_BIT_TICKS is 0
 static EventGroupHandle_t wifi_event_group;
+
 /*
  * The event group allows multiple bits for each event,
  * but we only care about one event - are we connected
@@ -24,13 +25,15 @@ static void (*on_wifi_connected)();
 static void (*on_wifi_disconnected)();
 static void (*on_wifi_connection)();
 
+static os_timer_t wi_fi_reconnection_timer_g;
+
 /**
  * Do not forget to call free() function on returned pointer when it's no longer needed.
  *
  * *parameters - array of pointers to strings. The last parameter has to be NULL
  */
 void *set_string_parameters(const char string[], const char *parameters[]) {
-   unsigned char open_brace_found = 0;
+   bool open_brace_found = false;
    unsigned char parameters_amount = 0;
    unsigned short result_string_length = 0;
 
@@ -38,20 +41,19 @@ void *set_string_parameters(const char string[], const char *parameters[]) {
    }
 
    // Calculate the length without symbols to be replaced ('<x>')
-   const char *string_pointer;
-   for (string_pointer = string; *string_pointer != '\0'; string_pointer++) {
+   for (const char *string_pointer = string; *string_pointer != '\0'; string_pointer++) {
       if (*string_pointer == '<') {
          if (open_brace_found) {
             return NULL;
          }
-         open_brace_found = 1;
+         open_brace_found = true;
          continue;
       }
       if (*string_pointer == '>') {
          if (!open_brace_found) {
             return NULL;
          }
-         open_brace_found = 0;
+         open_brace_found = false;
          continue;
       }
       if (open_brace_found) {
@@ -65,21 +67,21 @@ void *set_string_parameters(const char string[], const char *parameters[]) {
       return NULL;
    }
 
-   unsigned char i;
-   for (i = 0; parameters[i] != NULL; i++) {
+   for (unsigned char i = 0; parameters[i] != NULL; i++) {
       result_string_length += strnlen(parameters[i], 0xFFFF);
    }
    // 1 is for the last \0 character
    result_string_length++;
 
-   char *allocated_result = MALLOC(result_string_length, __LINE__, 0xFFFF); // (string_length + 1) * sizeof(char)
+   char *allocated_result = MALLOC(result_string_length, 0xFFFF); // (string_length + 1) * sizeof(char)
 
    if (allocated_result == NULL) {
       return NULL;
    }
 
-   unsigned short result_string_index = 0, input_string_index = 0;
-   for (; result_string_index < result_string_length - 1; result_string_index++) {
+   for (unsigned short result_string_index = 0, input_string_index = 0;
+         result_string_index < result_string_length - 1;
+         result_string_index++) {
       char input_string_char = string[input_string_index];
 
       if (input_string_char == '<') {
@@ -149,7 +151,7 @@ char *put_flash_string_into_heap(const char *flash_string, unsigned int allocate
 
    unsigned short string_length = strlen(flash_string);
 
-   char *heap_string = MALLOC(string_length + 1, __LINE__, allocated_time);
+   char *heap_string = MALLOC(string_length + 1, allocated_time);
 
    for (unsigned short i = 0; i < string_length; i++) {
       *(heap_string + i) = flash_string[i];
@@ -166,12 +168,6 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
 
          #ifdef ALLOW_USE_PRINTF
          printf("\nSYSTEM_EVENT_STA_START event\n");
-         /*wifi_scan_config_t scan_config;
-         scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
-         scan_config.scan_time.passive = 1500;
-         scan_config.scan_time.active.min = 500;
-         scan_config.scan_time.active.max = 1500;
-         esp_wifi_scan_start(&scan_config, false);*/
          #endif
          break;
       case SYSTEM_EVENT_SCAN_DONE:
@@ -196,6 +192,7 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          printf("Got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
          #endif
 
+         os_timer_disarm(&wi_fi_reconnection_timer_g);
          xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
          on_wifi_connected();
          break;
@@ -218,9 +215,12 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          #endif
 
          on_wifi_disconnected();
-         //esp_wifi_connect();
          on_wifi_connection();
          xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+
+         os_timer_disarm(&wi_fi_reconnection_timer_g);
+         os_timer_setfn(&wi_fi_reconnection_timer_g, (os_timer_func_t *) esp_wifi_connect, NULL);
+         os_timer_arm(&wi_fi_reconnection_timer_g, WI_FI_RECONNECTION_INTERVAL_MS, true);
          break;
       default:
          break;
@@ -251,13 +251,6 @@ void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_
    #ifdef ALLOW_USE_PRINTF
    printf("\nwifi_init_sta finished\n");
    #endif
-
-   /*#ifdef ALLOW_USE_PRINTF
-   wifi_scan_config_t scan_config;
-
-   esp_wifi_scan_start(&scan_config, true);
-   esp_wifi_scan_get_ap_records
-   #endif*/
 }
 
 bool is_connected_to_wifi() {
@@ -405,7 +398,7 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
    }
 
    unsigned short received_bytes_amount = 0;
-   char *final_response_result = MALLOC(response_buffer_size, __LINE__, invocation_time);
+   char *final_response_result = MALLOC(response_buffer_size, invocation_time);
 
    for (;;) {
       int send_result = send(socket_id, request, strlen(request), 0);
@@ -472,16 +465,3 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
 
    return final_response_result;
 }
-
-/*
- * Added into SDK's esp_system_internal.h:
- * uint32_t get_reset_reason_custom();
- *
- * Added into SDK's reset_reason.c:
-   uint32_t get_reset_reason_custom()
-   {
-      const uint32_t hw_reset = esp_rtc_get_reset_reason();
-      const uint32_t hint = esp_reset_reason_get_hint(hw_reset);
-      return get_reset_reason(hw_reset, hint);
-   }
- */

@@ -19,6 +19,8 @@ static const char REQUEST_PAYLOAD_CONTENT_MSG[] = "\nRequest payload: %s\n";
 static const char CREATED_REQUEST_CONTENT_MSG[] = "\nCreated request: %s\n";
 static const char CURRENT_PARTITION_MSG[] = "\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n";
 static const char RESPONSE_OK_MSG[] = "\nResponse OK\n";
+static const char WI_FI_SCANNING_MSG[] = "Start of Wi-Fi scanning... %u\n";
+static const char WI_FI_SCANNING_SKIPPED_MSG[] = "Wi-Fi scanning skipped. %u\n";
 #endif
 
 static unsigned int milliseconds_counter_g;
@@ -42,13 +44,13 @@ static void milliseconds_counter() {
    milliseconds_counter_g++;
 }
 
-void start_100millisecons_counter() {
+static void start_100millisecons_counter() {
    os_timer_disarm(&millisecons_time_serv_g);
    os_timer_setfn(&millisecons_time_serv_g, (os_timer_func_t *) milliseconds_counter, NULL);
-   os_timer_arm(&millisecons_time_serv_g, 1000 / MILLISECONDS_COUNTER_DIVIDER, 1); // 100 ms
+   os_timer_arm(&millisecons_time_serv_g, 1000 / MILLISECONDS_COUNTER_DIVIDER, true); // 100 ms
 }
 
-void stop_milliseconds_counter() {
+static void stop_milliseconds_counter() {
    os_timer_disarm(&millisecons_time_serv_g);
 }
 
@@ -61,9 +63,14 @@ static void scan_access_point_task(void *pvParameters) {
 
    scan_config.ssid = (unsigned char *) ACCESS_POINT_NAME;
    scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
+   scan_config.scan_time.passive = 500000;
 
    for (;;) {
-      if ((xEventGroupGetBits(general_event_group_g) & CONNECTED_TO_AP_FLAG) == CONNECTED_TO_AP_FLAG &&
+      #ifdef ALLOW_USE_PRINTF
+      printf(WI_FI_SCANNING_MSG, milliseconds_counter_g);
+      #endif
+
+      if (is_connected_to_wifi() &&
             esp_wifi_scan_start(&scan_config, true) == ESP_OK &&
             esp_wifi_scan_get_ap_records(&scanned_access_points_amount, scanned_access_points) == ESP_OK) {
          signal_strength_g = scanned_access_points[0].rssi;
@@ -74,6 +81,10 @@ static void scan_access_point_task(void *pvParameters) {
 
          vTaskDelay(rescan_when_connected_task_delay);
       } else {
+         #ifdef ALLOW_USE_PRINTF
+         printf(WI_FI_SCANNING_SKIPPED_MSG, milliseconds_counter_g);
+         #endif
+
          vTaskDelay(rescan_when_not_connected_task_delay);
       }
    }
@@ -133,6 +144,10 @@ void send_status_info_task(void *pvParameters) {
    snprintf(free_heap_space, 7, "%u", esp_get_free_heap_size());
    char *reset_reason = "";
    char *system_restart_reason = "";
+   char temperature[3];
+   snprintf(temperature, 3, "%d", 0);
+   char humidity[3];
+   snprintf(humidity, 3, "%u", 0);
 
    if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       char build_timestamp_filled[30];
@@ -207,7 +222,8 @@ void send_status_info_task(void *pvParameters) {
    }
 
    const char *status_info_request_payload_template_parameters[] =
-         {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space, reset_reason, system_restart_reason, NULL};
+         {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space,
+               reset_reason, system_restart_reason, temperature, humidity, NULL};
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
@@ -219,7 +235,7 @@ void send_status_info_task(void *pvParameters) {
    snprintf(request_payload_length_string, 6, "%u", request_payload_length);
    const char *request_template_parameters[] = {request_payload_length_string, SERVER_IP_ADDRESS, request_payload, NULL};
    char *request = set_string_parameters(STATUS_INFO_POST_REQUEST, request_template_parameters);
-   FREE(request_payload, __LINE__);
+   FREE(request_payload);
 
    #ifdef ALLOW_USE_PRINTF
    printf(CREATED_REQUEST_CONTENT_MSG, request);
@@ -256,16 +272,15 @@ void send_status_info_task(void *pvParameters) {
          gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
       }
 
-      FREE(response, __LINE__);
+      FREE(response);
    }
 
    vTaskDelete(NULL);
 }
 
 static void send_status_info() {
-   if (xTaskGetHandle(SEND_STATUS_INFO_TASK_NAME) != NULL ||
-         (xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG ||
-         (xEventGroupGetBits(general_event_group_g) & CONNECTED_TO_AP_FLAG) == 0) {
+   if (is_connected_to_wifi() == false || xTaskGetHandle(SEND_STATUS_INFO_TASK_NAME) != NULL ||
+         (xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
       return;
    }
 
@@ -290,7 +305,7 @@ static void pins_config() {
 
 static void uart_event_task(void *pvParameters) {
    uart_event_t event;
-   unsigned char *dtmp = (unsigned char *) ZALLOC(UART_RD_BUF_SIZE, __LINE__, milliseconds_counter_g);
+   unsigned char *dtmp = (unsigned char *) ZALLOC(UART_RD_BUF_SIZE, milliseconds_counter_g);
 
    for (;;) {
       #ifdef MONITOR_STACK_SIZE
@@ -348,14 +363,13 @@ static void uart_event_task(void *pvParameters) {
       }
    }
 
-   FREE(dtmp, __LINE__);
+   FREE(dtmp);
    dtmp = NULL;
    vTaskDelete(NULL);
 }
 
 static void on_wifi_connected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
-   xEventGroupSetBits(general_event_group_g, CONNECTED_TO_AP_FLAG);
    repetitive_ap_connecting_errors_counter_g = 0;
 
    send_status_info();
@@ -364,7 +378,6 @@ static void on_wifi_connected() {
 static void on_wifi_disconnected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
    gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
-   xEventGroupClearBits(general_event_group_g, CONNECTED_TO_AP_FLAG);
 }
 
 static void blink_on_wifi_connection_task(void *pvParameters) {
@@ -457,7 +470,7 @@ void app_main(void) {
 
    wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
-   xTaskCreate(scan_access_point_task, SCAN_ACCESS_POINT_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+   //xTaskCreate(scan_access_point_task, SCAN_ACCESS_POINT_TASK_NAME, configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);

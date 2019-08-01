@@ -17,6 +17,7 @@
 #include "sys/socket.h"
 
 #define HEXADECIMAL_ADDRESS_FORMAT "%08x"
+#define WI_FI_RECONNECTION_INTERVAL_MS (30 * 1000)
 
 void *set_string_parameters(const char string[], const char *parameters[]);
 char *generate_post_request(char *request);

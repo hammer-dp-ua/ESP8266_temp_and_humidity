@@ -4,13 +4,13 @@
 
 static struct malloc_logger_element malloc_logger_list[MALLOC_LOGGER_LIST_SIZE];
 
-static const char TO_BE_ALLOCATED_ELEMENT_MSG[] = "\n%u length heap element is to be allocated. Code line: %u, time: %u\n";
-static const char ALLOCATED_ELEMENT_MSG[] = "\n%u length heap has been allocated. Address: %u, code line: %u, time: %u, index in logger list: %u\n";
-static const char TO_BE_REMOVED_ELEMENT_MSG[] = "\nElement is to be removed from heap. Address: %u\n";
-static const char FOUND_ELEMENT_MSG[] = "\n%u element has been found in logger list\n";
-static const char REMOVED_ELEMENT_MSG[] = "\n%u element has been removed from heap. Index in logger list: %u\n";
+static const char TO_BE_ALLOCATED_ELEMENT_MSG[] = "\n%u length heap element is to be allocated. Code line: %s(%u), time: %u\n";
+static const char ALLOCATED_ELEMENT_MSG[] = "\n%u length element has been allocated in heap. Address: 0x%X, code line: %s(%u), time: %u, index in logger list: %u\n";
+static const char TO_BE_REMOVED_ELEMENT_MSG[] = "\nElement is to be removed from heap. Address: 0x%X\n";
+static const char FOUND_ELEMENT_MSG[] = "\n0x%X element has been found in logger list\n";
+static const char REMOVED_ELEMENT_MSG[] = "\n0x%X element has been removed from heap. Index in logger list: %u\n";
 static const char FULL_LOGGER_LIST_MSG[] = "\nMalloc_logger_list is full!\n";
-static const char ALLOCATED_ELEMENT_INFO_MSG[] = "\nElement's variable line: %u, allocated time: %u\n";
+static const char ALLOCATED_ELEMENT_INFO_MSG[] = "\nElement's variable line: %s(%u), allocated time: %u\n";
 
 static void check_is_full(unsigned char current_amount) {
    if (current_amount >= MALLOC_LOGGER_LIST_SIZE) {
@@ -18,8 +18,8 @@ static void check_is_full(unsigned char current_amount) {
    }
 }
 
-char *malloc_logger(unsigned int element_size, unsigned int variable_line, unsigned int allocated_time, bool is_zalloc) {
-   printf(TO_BE_ALLOCATED_ELEMENT_MSG, element_size, variable_line, allocated_time);
+char *malloc_logger(unsigned int element_size, unsigned int allocated_time, const char *file_name, unsigned int variable_line, bool is_zalloc) {
+   printf(TO_BE_ALLOCATED_ELEMENT_MSG, element_size, file_name, variable_line, allocated_time);
 
    char *allocated_element;
 
@@ -35,9 +35,10 @@ char *malloc_logger(unsigned int element_size, unsigned int variable_line, unsig
       if (malloc_logger_list[i].allocated_element_address == NULL) {
          malloc_logger_list[i].allocated_element_address = allocated_element;
          malloc_logger_list[i].variable_line = variable_line;
+         malloc_logger_list[i].file_name = file_name;
          malloc_logger_list[i].allocated_time = allocated_time;
 
-         printf(ALLOCATED_ELEMENT_MSG, element_size, (unsigned int) allocated_element, variable_line, allocated_time, i);
+         printf(ALLOCATED_ELEMENT_MSG, element_size, (unsigned int) allocated_element, file_name, variable_line, allocated_time, i);
          break;
       }
    }
@@ -59,6 +60,7 @@ void free_logger(void *allocated_address_element_to_free, unsigned int variable_
          os_free(allocated_address_element_to_free);
          malloc_logger_list[i].allocated_element_address = NULL;
          malloc_logger_list[i].variable_line = 0;
+         malloc_logger_list[i].file_name = NULL;
          malloc_logger_list[i].allocated_time = 0;
 
          printf(REMOVED_ELEMENT_MSG, (unsigned int) allocated_address_element_to_free, i);
@@ -97,7 +99,7 @@ void print_not_empty_elements_lines() {
 
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address != NULL) {
-         printf(ALLOCATED_ELEMENT_INFO_MSG, malloc_logger_list[i].variable_line, malloc_logger_list[i].allocated_time);
+         printf(ALLOCATED_ELEMENT_INFO_MSG, malloc_logger_list[i].file_name, malloc_logger_list[i].variable_line, malloc_logger_list[i].allocated_time);
       }
    }
 }

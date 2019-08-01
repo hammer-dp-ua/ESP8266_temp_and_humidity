@@ -36,7 +36,6 @@
 #define SERVER_IS_AVAILABLE_FLAG
 #define FIRST_STATUS_INFO_SENT_FLAG (1 << 0)
 #define UPDATE_FIRMWARE_FLAG        (1 << 1)
-#define CONNECTED_TO_AP_FLAG        (1 << 2)
 #define REQUEST_ERROR_OCCURRED_FLAG
 
 #define REQUEST_IDLE_TIME_ON_ERROR        (10000 / portTICK_RATE_MS) // 10 sec
@@ -79,7 +78,8 @@ const char STATUS_INFO_POST_REQUEST[] =
       "Accept: application/json\r\n\r\n"
       "<3>\r\n";
 const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
-      "{\"gain\":\"<1>\","
+      "{\""
+      "gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"
       "\"pendingConnectionErrors\":<4>,"
@@ -87,7 +87,10 @@ const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"buildTimestamp\":\"<6>\","
       "\"freeHeapSpace\":<7>,"
       "\"resetReason\":\"<8>\","
-      "\"systemRestartReason\":\"<9>\"}";
+      "\"systemRestartReason\":\"<9>\","
+      "\"temperature\":<10>,"
+      "\"humidity\":<11>"
+      "}";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 
 static void pins_config();
