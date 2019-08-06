@@ -144,10 +144,14 @@ void send_status_info_task(void *pvParameters) {
    snprintf(free_heap_space, 7, "%u", esp_get_free_heap_size());
    char *reset_reason = "";
    char *system_restart_reason = "";
-   char temperature[3];
-   snprintf(temperature, 3, "%d", 0);
-   char humidity[3];
-   snprintf(humidity, 3, "%u", 0);
+   char temperature_param[7];
+   float temperature = 0.0F;
+   sht21_get_temperature(&temperature);
+   snprintf(temperature_param, 7, "%d.%u", (int) temperature, abs((int) (temperature * 100)) - abs((int) (temperature)));
+   char humidity_param[7];
+   float humidity = 0.0F;
+   sht21_get_humidity(&humidity);
+   snprintf(humidity_param, 7, "%d.%u", (int) humidity, abs((int) (humidity * 100)) - abs((int) (humidity)));
 
    if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       char build_timestamp_filled[30];
@@ -223,11 +227,11 @@ void send_status_info_task(void *pvParameters) {
 
    const char *status_info_request_payload_template_parameters[] =
          {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space,
-               reset_reason, system_restart_reason, temperature, humidity, NULL};
+               reset_reason, system_restart_reason, temperature_param, humidity_param, NULL};
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
-   printf(REQUEST_PAYLOAD_CONTENT_MSG, request_payload);
+   //printf(REQUEST_PAYLOAD_CONTENT_MSG, request_payload);
    #endif
 
    unsigned short request_payload_length = strnlen(request_payload, 0xFFFF);
@@ -280,7 +284,7 @@ void send_status_info_task(void *pvParameters) {
 
 static void send_status_info() {
    if (is_connected_to_wifi() == false || xTaskGetHandle(SEND_STATUS_INFO_TASK_NAME) != NULL ||
-         (xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == UPDATE_FIRMWARE_FLAG) {
+         (xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG)) {
       return;
    }
 

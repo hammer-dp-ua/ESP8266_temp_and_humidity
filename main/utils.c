@@ -8,7 +8,7 @@ static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To b
 static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
 static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
 static const char ERROR_ON_RECEIVE_RESPONSE_MSG[] = "\nReceive failed. Error no.: %d\n";
-static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...";
+static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...\n";
 
 // FreeRTOS event group to signal when we are connected
 // Max 24 bits when configUSE_16_BIT_TICKS is 0
@@ -189,7 +189,7 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          break;
       case SYSTEM_EVENT_STA_GOT_IP:
          #ifdef ALLOW_USE_PRINTF
-         printf("Got IP: %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+         printf("Got IP: %s\n", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
          #endif
 
          os_timer_disarm(&wi_fi_reconnection_timer_g);

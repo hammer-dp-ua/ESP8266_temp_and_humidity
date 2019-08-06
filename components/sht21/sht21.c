@@ -92,7 +92,14 @@ static float sht21_calculate_temperature(unsigned short data, unsigned char chec
    if (checksum != sht21_calculate_crc(data)) {
       return SHT21_CRC_ERROR;
    }
-   if (data & 0x2) {
+
+   if (data == 0) {
+      return 0.0F;
+   } else if (data & 0x2) {
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nI2C ERROR. Humidity measurement instead of Temperature. Humidity: %d\n", (int) sht21_calculate_humidity(data, checksum));
+      #endif
+
       return SHT21_NOT_TEMPERATURE_MEASUREMENT_ERROR;
    }
 
@@ -104,7 +111,14 @@ static float sht21_calculate_humidity(unsigned short data, unsigned char checksu
    if (checksum != sht21_calculate_crc(data)) {
       return SHT21_CRC_ERROR;
    }
-   if (!(data & 0x2)) {
+
+   if (data == 0) {
+      return 0.0F;
+   } else if (!(data & 0x2)) {
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nI2C ERROR. Temperature measurement instead of Humidity. Temperature: %d\n", (int) sht21_calculate_temperature(data, checksum));
+      #endif
+
       return SHT21_NOT_HUMIDITY_MEASUREMENT_ERROR;
    }
 
@@ -117,11 +131,16 @@ esp_err_t sht21_get_temperature(float *temperature) {
    esp_err_t i2c_result_status = i2c_master_sht21_write_and_read(TRIGGER_T_MEASUREMENT, data, 3, 100 / portTICK_RATE_MS);
 
    if (i2c_result_status == ESP_OK) {
-      unsigned short temp_data = (data[0] << 8) | data[1];
-      *temperature = sht21_calculate_temperature(temp_data, data[2]);
+      unsigned short raw_data = (data[0] << 8) | data[1];
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nTemperature raw: 0x%X\n", raw_data);
+      #endif
+
+      *temperature = sht21_calculate_temperature(raw_data, data[2]);
    } else {
       #ifdef ALLOW_USE_PRINTF
-      printf("\nI2C ERROR. Result status: 0x%x", i2c_result_status);
+      printf("\nI2C ERROR. Result status: 0x%X\n", i2c_result_status);
       #endif
    }
    return i2c_result_status;
@@ -129,14 +148,19 @@ esp_err_t sht21_get_temperature(float *temperature) {
 
 esp_err_t sht21_get_humidity(float *humidity) {
    unsigned char data[3];
-   esp_err_t i2c_result_status = i2c_master_sht21_write_and_read(TRIGGER_RH_MEASUREMENT, data, 3, 40 / portTICK_RATE_MS);
+   esp_err_t i2c_result_status = i2c_master_sht21_write_and_read(TRIGGER_RH_MEASUREMENT, data, 3, 50 / portTICK_RATE_MS);
 
    if (i2c_result_status == ESP_OK) {
-      unsigned short temp_data = (data[0] << 8) | data[1];
-      *humidity = sht21_calculate_humidity(temp_data, data[2]);
+      unsigned short raw_data = (data[0] << 8) | data[1];
+
+      #ifdef ALLOW_USE_PRINTF
+      printf("\nHumidity raw: 0x%X\n", raw_data);
+      #endif
+
+      *humidity = sht21_calculate_humidity(raw_data, data[2]);
    } else {
       #ifdef ALLOW_USE_PRINTF
-      printf("\nI2C ERROR. Result status: 0x%x", i2c_result_status);
+      printf("\nI2C ERROR. Result status: 0x%x\n", i2c_result_status);
       #endif
    }
    return i2c_result_status;

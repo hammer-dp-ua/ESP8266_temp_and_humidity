@@ -78,8 +78,8 @@ const char STATUS_INFO_POST_REQUEST[] =
       "Accept: application/json\r\n\r\n"
       "<3>\r\n";
 const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
-      "{\""
-      "gain\":\"<1>\","
+      "{"
+      "\"gain\":\"<1>\","
       "\"deviceName\":\"<2>\","
       "\"errors\":<3>,"
       "\"pendingConnectionErrors\":<4>,"

@@ -23,5 +23,6 @@ typedef enum {
    TRIGGER_RH_MEASUREMENT = 0xF5
 } SHT21_Commands;
 
+static float sht21_calculate_humidity(unsigned short data, unsigned char checksum);
 esp_err_t sht21_get_temperature(float *temperature);
 esp_err_t sht21_get_humidity(float *humidity);
