@@ -146,11 +146,13 @@ void send_status_info_task(void *pvParameters) {
    char *system_restart_reason = "";
    char temperature_param[7];
    float temperature = 0.0F;
+   i2c_master_init();
    sht21_get_temperature(&temperature);
    snprintf(temperature_param, 7, "%d.%u", (int) temperature, abs((int) (temperature * 100)) - abs((int) (temperature)));
    char humidity_param[7];
    float humidity = 0.0F;
    sht21_get_humidity(&humidity);
+   i2c_driver_delete(I2C_MASTER_NUM);
    snprintf(humidity_param, 7, "%d.%u", (int) humidity, abs((int) (humidity * 100)) - abs((int) (humidity)));
 
    if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
@@ -438,16 +440,16 @@ void check_errors_amount() {
    }
 }
 
-static esp_err_t i2c_master_init() {
+static void i2c_master_init() {
    i2c_config_t conf;
    conf.mode = I2C_MODE_MASTER;
    conf.sda_io_num = I2C_MASTER_SDA_IO;
    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
    conf.scl_io_num = I2C_MASTER_SCL_IO;
    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+
    ESP_ERROR_CHECK(i2c_driver_install(I2C_MASTER_NUM, conf.mode));
    ESP_ERROR_CHECK(i2c_param_config(I2C_MASTER_NUM, &conf));
-   return ESP_OK;
 }
 
 void app_main(void) {
@@ -455,7 +457,6 @@ void app_main(void) {
 
    pins_config();
    uart_config();
-   i2c_master_init();
 
    vTaskDelay(3000 / portTICK_RATE_MS);
 

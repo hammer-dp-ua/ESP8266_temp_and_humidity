@@ -29,8 +29,8 @@
 #define AP_CONNECTION_STATUS_LED_PIN         GPIO_NUM_5
 #define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_NUM_4
 
-#define I2C_MASTER_SCL_IO  2         // gpio number for I2C master clock, D4
-#define I2C_MASTER_SDA_IO  12        // gpio number for I2C master data, D6
+#define I2C_MASTER_SCL_IO  GPIO_NUM_2  // gpio number for I2C master clock, D4
+#define I2C_MASTER_SDA_IO  GPIO_NUM_12 // gpio number for I2C master data, D6
 #define I2C_MASTER_NUM     I2C_NUM_0 // I2C port number for master dev
 
 #define SERVER_IS_AVAILABLE_FLAG
@@ -95,6 +95,7 @@ const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 
 static void pins_config();
 static void uart_config();
+static void i2c_master_init();
 static void scan_access_point_task(void *pvParameters);
 void send_long_polling_requests_task(void *pvParameters);
 void autoconnect_task(void *pvParameters);
