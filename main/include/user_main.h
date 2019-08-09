@@ -115,6 +115,9 @@ void recheck_false_alarm_callback();
 void disconnect_connection_task(void *pvParameters);
 static void schedule_sending_status_info();
 bool check_to_continue();
+static void start_both_leds_blinking();
+static void blink_both_leds();
+static void stop_both_leds_blinking();
 
 #endif
 

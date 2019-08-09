@@ -34,8 +34,8 @@ static int connection_error_code_g;
 static os_timer_t millisecons_time_serv_g;
 static os_timer_t status_sender_timer_g;
 static os_timer_t errors_checker_timer_g;
+static os_timer_t blink_both_leds_g;
 
-char *responses[10];
 static EventGroupHandle_t general_event_group_g;
 
 static QueueHandle_t uart0_queue;
@@ -90,18 +90,24 @@ static void scan_access_point_task(void *pvParameters) {
    }
 }
 
-void blink_leds_while_updating_task(void *pvParameters) {
-   for (;;) {
-      if (gpio_get_level(AP_CONNECTION_STATUS_LED_PIN)) {
-         gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
-         gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
-      } else {
-         gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
-         gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
-      }
-
-      vTaskDelay(100 / portTICK_RATE_MS);
+static void blink_both_leds() {
+   if (gpio_get_level(AP_CONNECTION_STATUS_LED_PIN)) {
+      gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
+      gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
+   } else {
+      gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
+      gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
    }
+}
+
+static void start_both_leds_blinking() {
+   os_timer_disarm(&blink_both_leds_g);
+   os_timer_setfn(&blink_both_leds_g, (os_timer_func_t *) blink_both_leds, NULL);
+   os_timer_arm(&blink_both_leds_g, 2000 / MILLISECONDS_COUNTER_DIVIDER, true); // 100 ms
+}
+
+static void stop_both_leds_blinking() {
+   os_timer_disarm(&blink_both_leds_g);
 }
 
 static void blink_on_send(gpio_num_t pin) {
@@ -266,7 +272,7 @@ void send_status_info_task(void *pvParameters) {
 
          if (strstr(response, UPDATE_FIRMWARE)) {
             xEventGroupSetBits(general_event_group_g, UPDATE_FIRMWARE_FLAG);
-            xTaskCreate(blink_leds_while_updating_task, BLINK_LEDS_WHILE_UPDATING_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+            start_both_leds_blinking();
 
             SYSTEM_RESTART_REASON_TYPE reason = SOFTWARE_UPGRADE;
             rtc_mem_write(SYSTEM_RESTART_REASON_TYPE_RTC_ADDRESS, &reason, 4);
@@ -458,7 +464,12 @@ void app_main(void) {
    pins_config();
    uart_config();
 
+   start_both_leds_blinking();
    vTaskDelay(3000 / portTICK_RATE_MS);
+   stop_both_leds_blinking();
+
+   gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
+   gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
 
    #ifdef ALLOW_USE_PRINTF
    const esp_partition_t *running = esp_ota_get_running_partition();
