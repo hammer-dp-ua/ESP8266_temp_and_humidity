@@ -9,6 +9,7 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "driver/i2c.h"
+#include "driver/adc.h"
 
 #include "esp8266/rtc_register.h"
 #include "internal/esp_system_internal.h"
@@ -89,7 +90,8 @@ const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"resetReason\":\"<8>\","
       "\"systemRestartReason\":\"<9>\","
       "\"temperature\":<10>,"
-      "\"humidity\":<11>"
+      "\"humidity\":<11>,"
+      "\"light\":<12>"
       "}";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 

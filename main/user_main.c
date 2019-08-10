@@ -1,6 +1,11 @@
 /**
  * Pins 4 and 5 on some ESP8266-07 are exchanged on silk screen!!!
  *
+ * Required connections:
+ * GPIO15 to GND
+ * GPIO to GND or to "+" for flashing
+ * EN to "+"
+ *
  * SPI SPI_CPOL & SPI_CPHA:
  *    SPI_CPOL - (0) Clock is low when inactive
  *               (1) Clock is high when inactive
@@ -25,10 +30,10 @@ static const char WI_FI_SCANNING_SKIPPED_MSG[] = "Wi-Fi scanning skipped. %u\n";
 
 static unsigned int milliseconds_counter_g;
 static int signal_strength_g;
-static unsigned short errors_counter_g;
+static unsigned short errors_counter_g = 0;
 static unsigned short repetitive_request_errors_counter_g = 0;
 static unsigned char pending_connection_errors_counter_g;
-static unsigned int repetitive_ap_connecting_errors_counter_g;
+static unsigned int repetitive_ap_connecting_errors_counter_g = 0;
 static int connection_error_code_g;
 
 static os_timer_t millisecons_time_serv_g;
@@ -160,6 +165,9 @@ void send_status_info_task(void *pvParameters) {
    sht21_get_humidity(&humidity);
    i2c_driver_delete(I2C_MASTER_NUM);
    snprintf(humidity_param, 7, "%d.%u", (int) humidity, abs((int) (humidity * 100)) - abs((int) (humidity)));
+   unsigned short light = adc_read();
+   char light_param[6];
+   snprintf(light_param, 6, "%u", light);
 
    if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       char build_timestamp_filled[30];
@@ -235,7 +243,7 @@ void send_status_info_task(void *pvParameters) {
 
    const char *status_info_request_payload_template_parameters[] =
          {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space,
-               reset_reason, system_restart_reason, temperature_param, humidity_param, NULL};
+               reset_reason, system_restart_reason, temperature_param, humidity_param, light_param, NULL};
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
@@ -257,9 +265,11 @@ void send_status_info_task(void *pvParameters) {
 
    if (response == NULL) {
       repetitive_request_errors_counter_g++;
+      errors_counter_g++;
       gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
    } else {
       if (strstr(response, RESPONSE_SERVER_SENT_OK)) {
+         repetitive_request_errors_counter_g = 0;
          gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 1);
 
          if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
@@ -281,6 +291,7 @@ void send_status_info_task(void *pvParameters) {
          }
       } else {
          repetitive_request_errors_counter_g++;
+         errors_counter_g++;
          gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
       }
 

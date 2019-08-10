@@ -97,7 +97,7 @@ static float sht21_calculate_temperature(unsigned short data, unsigned char chec
       return 0.0F;
    } else if (data & 0x2) {
       #ifdef ALLOW_USE_PRINTF
-      printf("\nI2C ERROR. Humidity measurement instead of Temperature. Humidity: %d\n", (int) sht21_calculate_humidity(data, checksum));
+      printf("\nI2C ERROR. Humidity measurement instead of Temperature\n");
       #endif
 
       return SHT21_NOT_TEMPERATURE_MEASUREMENT_ERROR;
@@ -116,7 +116,7 @@ static float sht21_calculate_humidity(unsigned short data, unsigned char checksu
       return 0.0F;
    } else if (!(data & 0x2)) {
       #ifdef ALLOW_USE_PRINTF
-      printf("\nI2C ERROR. Temperature measurement instead of Humidity. Temperature: %d\n", (int) sht21_calculate_temperature(data, checksum));
+      printf("\nI2C ERROR. Temperature measurement instead of Humidity\n");
       #endif
 
       return SHT21_NOT_HUMIDITY_MEASUREMENT_ERROR;
