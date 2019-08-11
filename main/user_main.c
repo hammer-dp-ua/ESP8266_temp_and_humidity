@@ -275,6 +275,8 @@ void send_status_info_task(void *pvParameters) {
 
    char *response = send_request(request, 255, milliseconds_counter_g);
 
+   FREE(request);
+
    if (response == NULL) {
       repetitive_request_errors_counter_g++;
       errors_counter_g++;

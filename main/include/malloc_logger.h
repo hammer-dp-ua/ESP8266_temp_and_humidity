@@ -18,7 +18,7 @@
 #ifndef MALLOC_LOGGER
 #define MALLOC_LOGGER
 
-#define MALLOC_LOGGER_LIST_SIZE 50
+#define MALLOC_LOGGER_LIST_SIZE 20
 
 struct malloc_logger_element {
    unsigned int variable_line;

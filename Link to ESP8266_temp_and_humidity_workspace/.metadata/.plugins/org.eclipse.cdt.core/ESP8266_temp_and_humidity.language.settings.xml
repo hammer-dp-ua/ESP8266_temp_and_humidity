@@ -1807,7 +1807,6 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -1838,7 +1837,13 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/ota/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/sht21/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include"/>
@@ -1961,7 +1966,9 @@
 						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
 					</resource>
 					<resource project-relative-path="components/sht21/sht21.c">
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/sht21/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
 						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
@@ -2003,6 +2010,9 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/ota/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
@@ -2020,7 +2030,7 @@
 						<entry kind="includePath" name="/${ProjName}/build/include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/build/components/sht21">
+						<entry kind="includePath" name="/${ProjName}/build/sht21">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="macro" name="APP_OFFSET" value="0x10000"/>
@@ -2137,7 +2147,6 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -2168,7 +2177,13 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/ota/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/sht21/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include"/>
@@ -6727,7 +6742,6 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -6789,7 +6803,7 @@
 						<entry kind="macro" name="CONFIG_ENABLE_BOOT_CHECK_SUM" value="1"/>
 						<entry kind="macro" name="ESP_PLATFORM" value=""/>
 						<entry kind="macro" name="ICACHE_FLASH" value=""/>
-						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-45-g217298f4-dirty&quot;"/>
+						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-51-g913a06a9-dirty&quot;"/>
 						<entry kind="macro" name="MBEDTLS_CONFIG_FILE" value="&quot;mbedtls/esp_config.h&quot;"/>
 						<entry kind="macro" name="MQTTCLIENT_PLATFORM_HEADER" value="MQTTFreeRTOS.h"/>
 						<entry kind="macro" name="MQTT_TASK" value=""/>
@@ -6813,7 +6827,6 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -6875,7 +6888,7 @@
 						<entry kind="macro" name="CONFIG_ENABLE_BOOT_CHECK_SUM" value="1"/>
 						<entry kind="macro" name="ESP_PLATFORM" value=""/>
 						<entry kind="macro" name="ICACHE_FLASH" value=""/>
-						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-45-g217298f4-dirty&quot;"/>
+						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-51-g913a06a9-dirty&quot;"/>
 						<entry kind="macro" name="MBEDTLS_CONFIG_FILE" value="&quot;mbedtls/esp_config.h&quot;"/>
 						<entry kind="macro" name="MQTTCLIENT_PLATFORM_HEADER" value="MQTTFreeRTOS.h"/>
 						<entry kind="macro" name="MQTT_TASK" value=""/>
@@ -6888,7 +6901,9 @@
 						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
 					</resource>
 					<resource project-relative-path="components/sht21/sht21.c">
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/sht21/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
 						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
@@ -6930,6 +6945,9 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/ota/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
@@ -6947,7 +6965,7 @@
 						<entry kind="includePath" name="/${ProjName}/build/include">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
-						<entry kind="includePath" name="/${ProjName}/build/components/sht21">
+						<entry kind="includePath" name="/${ProjName}/build/sht21">
 							<flag value="VALUE_WORKSPACE_PATH"/>
 						</entry>
 						<entry kind="macro" name="APP_OFFSET" value="0x10000"/>
@@ -6979,87 +6997,6 @@
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include/freertos"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include/freertos/private"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/port/esp8266/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/port/esp8266/include/freertos"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/heap/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/heap/port/esp8266/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/jsmn/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/libsodium/libsodium/src/libsodium/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/libsodium/port_include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/log/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include/lwip/apps"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include/lwip"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/lwip/src/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/lwip/src/include/posix"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/port/esp8266/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/port/esp8266/include/port"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mdns/include"/>
-						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTClient-C/src"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTClient-C/src/FreeRTOS"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTPacket/src"/>
-						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include/spiffs"/>
-						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/mbedtls/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/port/esp8266/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/port/openssl/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/tcpip_adapter/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/util/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/vfs/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/wpa_supplicant/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/wpa_supplicant/port/include"/>
-						<entry kind="includePath" name="/${ProjName}/build/include">
-							<flag value="VALUE_WORKSPACE_PATH"/>
-						</entry>
-						<entry kind="includePath" name="/${ProjName}/build/main">
-							<flag value="VALUE_WORKSPACE_PATH"/>
-						</entry>
-						<entry kind="macro" name="APP_OFFSET" value="0x10000"/>
-						<entry kind="macro" name="APP_SIZE" value="0xf0000"/>
-						<entry kind="macro" name="CONFIG_ENABLE_BOOT_CHECK_SUM" value="1"/>
-						<entry kind="macro" name="ESP_PLATFORM" value=""/>
-						<entry kind="macro" name="ICACHE_FLASH" value=""/>
-						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-51-g913a06a9-dirty&quot;"/>
-						<entry kind="macro" name="MBEDTLS_CONFIG_FILE" value="&quot;mbedtls/esp_config.h&quot;"/>
-						<entry kind="macro" name="MQTTCLIENT_PLATFORM_HEADER" value="MQTTFreeRTOS.h"/>
-						<entry kind="macro" name="MQTT_TASK" value=""/>
-						<entry kind="macro" name="WITH_POSIX" value=""/>
-						<entry kind="macro" name="WOLFSSL_USER_SETTINGS" value=""/>
-						<entry kind="macro" name="_CLOCKS_PER_SEC_" value="CONFIG_FREERTOS_HZ"/>
-						<entry kind="macro" name="_POSIX_THREADS" value="1"/>
-						<entry kind="macro" name="_UNIX98_THREAD_MUTEX_ATTRIBUTES" value="1"/>
-						<entry kind="macro" name="__ESP_FILE__" value="&quot;user_main.c&quot;"/>
-						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
-					</resource>
-					<resource project-relative-path="main/utils.c">
-						<entry kind="includePath" name="/${ProjName}/main/include">
-							<flag value="VALUE_WORKSPACE_PATH"/>
-						</entry>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
-						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/cJSON"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
-						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
-						<entry kind="includePath" name="/c/Users/USER/workspace/ESP8266_temp_and_humidity/components/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
 						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
@@ -7121,7 +7058,92 @@
 						<entry kind="macro" name="CONFIG_ENABLE_BOOT_CHECK_SUM" value="1"/>
 						<entry kind="macro" name="ESP_PLATFORM" value=""/>
 						<entry kind="macro" name="ICACHE_FLASH" value=""/>
-						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-45-g217298f4-dirty&quot;"/>
+						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-51-g913a06a9-dirty&quot;"/>
+						<entry kind="macro" name="MBEDTLS_CONFIG_FILE" value="&quot;mbedtls/esp_config.h&quot;"/>
+						<entry kind="macro" name="MQTTCLIENT_PLATFORM_HEADER" value="MQTTFreeRTOS.h"/>
+						<entry kind="macro" name="MQTT_TASK" value=""/>
+						<entry kind="macro" name="WITH_POSIX" value=""/>
+						<entry kind="macro" name="WOLFSSL_USER_SETTINGS" value=""/>
+						<entry kind="macro" name="_CLOCKS_PER_SEC_" value="CONFIG_FREERTOS_HZ"/>
+						<entry kind="macro" name="_POSIX_THREADS" value="1"/>
+						<entry kind="macro" name="_UNIX98_THREAD_MUTEX_ATTRIBUTES" value="1"/>
+						<entry kind="macro" name="__ESP_FILE__" value="&quot;user_main.c&quot;"/>
+						<entry kind="libraryFile" name="libx106-elf-gcc.a"/>
+					</resource>
+					<resource project-relative-path="main/utils.c">
+						<entry kind="includePath" name="/${ProjName}/main/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/app_update/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/bootloader_support/include"/>
+						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/cjson/cJSON"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/port/include/coap"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/coap/libcoap/include/coap"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp-tls"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/esp8266/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/espos/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include/freertos"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/include/freertos/private"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/port/esp8266/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/freertos/port/esp8266/include/freertos"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/heap/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/heap/port/esp8266/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/jsmn/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/libsodium/libsodium/src/libsodium/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/libsodium/port_include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/log/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include/lwip/apps"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/include/lwip"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/lwip/src/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/lwip/src/include/posix"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/port/esp8266/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/lwip/port/esp8266/include/port"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mdns/include"/>
+						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTClient-C/src"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTClient-C/src/FreeRTOS"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/mqtt/paho/MQTTPacket/src"/>
+						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/newlib/newlib/port/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/nvs_flash/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/ota/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/pthread/include"/>
+						<entry kind="includePath" name="/${ProjName}/components/sht21/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/smartconfig_ack/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spi_flash/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/spiffs/include/spiffs"/>
+						<entry kind="includePath" name="/c/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/mbedtls/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/port/esp8266/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/ssl/mbedtls/port/openssl/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/tcpip_adapter/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/util/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/vfs/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/wpa_supplicant/include"/>
+						<entry kind="includePath" name="C:/Users/USER/ESP8266/ESP8266_RTOS_SDK_v3.1/components/wpa_supplicant/port/include"/>
+						<entry kind="includePath" name="/${ProjName}/build/include">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="includePath" name="/${ProjName}/build/main">
+							<flag value="VALUE_WORKSPACE_PATH"/>
+						</entry>
+						<entry kind="macro" name="APP_OFFSET" value="0x10000"/>
+						<entry kind="macro" name="APP_SIZE" value="0xf0000"/>
+						<entry kind="macro" name="CONFIG_ENABLE_BOOT_CHECK_SUM" value="1"/>
+						<entry kind="macro" name="ESP_PLATFORM" value=""/>
+						<entry kind="macro" name="ICACHE_FLASH" value=""/>
+						<entry kind="macro" name="IDF_VER" value="&quot;v3.1-51-g913a06a9-dirty&quot;"/>
 						<entry kind="macro" name="MBEDTLS_CONFIG_FILE" value="&quot;mbedtls/esp_config.h&quot;"/>
 						<entry kind="macro" name="MQTTCLIENT_PLATFORM_HEADER" value="MQTTFreeRTOS.h"/>
 						<entry kind="macro" name="MQTT_TASK" value=""/>

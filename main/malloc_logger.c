@@ -9,14 +9,7 @@ static const char ALLOCATED_ELEMENT_MSG[] = "\n%u length element has been alloca
 static const char TO_BE_REMOVED_ELEMENT_MSG[] = "\nElement is to be removed from heap. Address: 0x%X\n";
 static const char FOUND_ELEMENT_MSG[] = "\n0x%X element has been found in logger list\n";
 static const char REMOVED_ELEMENT_MSG[] = "\n0x%X element has been removed from heap. Index in logger list: %u\n";
-static const char FULL_LOGGER_LIST_MSG[] = "\nMalloc_logger_list is full!\n";
 static const char ALLOCATED_ELEMENT_INFO_MSG[] = "\nElement's variable line: %s(%u), allocated time: %u\n";
-
-static void check_is_full(unsigned char current_amount) {
-   if (current_amount >= MALLOC_LOGGER_LIST_SIZE) {
-      printf(FULL_LOGGER_LIST_MSG);
-   }
-}
 
 char *malloc_logger(unsigned int element_size, unsigned int allocated_time, const char *file_name, unsigned int variable_line, bool is_zalloc) {
    printf(TO_BE_ALLOCATED_ELEMENT_MSG, element_size, file_name, variable_line, allocated_time);
@@ -30,7 +23,6 @@ char *malloc_logger(unsigned int element_size, unsigned int allocated_time, cons
    }
 
    unsigned char i;
-
    for (i = 0; i < MALLOC_LOGGER_LIST_SIZE; i++) {
       if (malloc_logger_list[i].allocated_element_address == NULL) {
          malloc_logger_list[i].allocated_element_address = allocated_element;
@@ -43,7 +35,7 @@ char *malloc_logger(unsigned int element_size, unsigned int allocated_time, cons
       }
    }
 
-   check_is_full(i);
+   assert(i < MALLOC_LOGGER_LIST_SIZE);
    return allocated_element;
 }
 
