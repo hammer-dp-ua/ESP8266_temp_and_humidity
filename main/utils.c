@@ -1,15 +1,5 @@
 #include "utils.h"
 
-static const char FAILED_TO_ALLOCATE_SOCKET_MSG[] = "\nFailed to allocate socket\n";
-static const char ALLOCATED_SOCKET_MSG[] = "\nSocket %d has been allocated\n";
-static const char SOCKET_CONNECTION_ERROR_MSG[] = "\nSocket connection failed. Error: %d\n";
-static const char SOCKET_CONNECTED_MSG[] = "\nSocket %d has been connected\n";
-static const char NOT_CONNECTED_TO_WI_FI_MSG[] = "\nNot connected to Wi-Fi. To be deleted task\n";
-static const char ERROR_ON_SENT_REQUEST_MSG[] = "\nError occurred during sending. Error no.: %d\n";
-static const char SUCCESSFULLY_SENT_REQUEST_MSG[] = "\nRequest has been sent. Socket %d\n";
-static const char ERROR_ON_RECEIVE_RESPONSE_MSG[] = "\nReceive failed. Error no.: %d\n";
-static const char SHUTTING_DOWN_SOCKET_MSG[] = "Shutting down socket and restarting...\n";
-
 // FreeRTOS event group to signal when we are connected
 // Max 24 bits when configUSE_16_BIT_TICKS is 0
 static EventGroupHandle_t wifi_event_group;
@@ -340,13 +330,13 @@ int connect_to_http_server() {
 
    if (socket_id < 0) {
       #ifdef ALLOW_USE_PRINTF
-      printf(FAILED_TO_ALLOCATE_SOCKET_MSG);
+      printf("\nFailed to allocate socket\n");
       #endif
 
       return -1;
    }
    #ifdef ALLOW_USE_PRINTF
-   printf(ALLOCATED_SOCKET_MSG, socket_id);
+   printf("\nSocket %d has been allocated\n", socket_id);
    #endif
 
    struct sockaddr_in destination_address;
@@ -358,7 +348,7 @@ int connect_to_http_server() {
 
    if (connection_result != 0) {
       #ifdef ALLOW_USE_PRINTF
-      printf(SOCKET_CONNECTION_ERROR_MSG, connection_result);
+      printf("\nSocket connection failed. Error: %d\n", connection_result);
       #endif
 
       close(socket_id);
@@ -366,12 +356,12 @@ int connect_to_http_server() {
    }
 
    #ifdef ALLOW_USE_PRINTF
-   printf(SOCKET_CONNECTED_MSG, socket_id);
+   printf("\nSocket %d has been connected\n", socket_id);
    #endif
 
    if (!is_connected_to_wifi()) {
       #ifdef ALLOW_USE_PRINTF
-      printf(NOT_CONNECTED_TO_WI_FI_MSG);
+      printf("\nNot connected to Wi-Fi. To be deleted task\n");
       #endif
 
       close(socket_id);
@@ -395,13 +385,13 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
 
       if (send_result < 0) {
          #ifdef ALLOW_USE_PRINTF
-         printf(ERROR_ON_SENT_REQUEST_MSG, send_result);
+         printf("\nError occurred during sending. Error no.: %d\n", send_result);
          #endif
 
          break;
       }
       #ifdef ALLOW_USE_PRINTF
-      printf(SUCCESSFULLY_SENT_REQUEST_MSG, socket_id);
+      printf("\nRequest has been sent. Socket %d\n", socket_id);
       #endif
 
       unsigned char tmp_buffer_size = response_buffer_size <= 255 ? response_buffer_size : 255;
@@ -411,7 +401,7 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
 
       if (len < 0) {
          #ifdef ALLOW_USE_PRINTF
-         printf(ERROR_ON_RECEIVE_RESPONSE_MSG, len);
+         printf("\nReceive failed. Error no.: %d\n", len);
          #endif
 
          break;
@@ -447,7 +437,7 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
    }
 
    #ifdef ALLOW_USE_PRINTF
-   printf(SHUTTING_DOWN_SOCKET_MSG);
+   printf("Shutting down socket and restarting...\n");
    #endif
 
    shutdown(socket_id, 0);

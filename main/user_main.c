@@ -15,19 +15,6 @@
 
 #include "user_main.h"
 
-#ifdef ALLOW_USE_PRINTF
-static const char REMAINING_STACK_SIZE_MSG[] = "\nRemaining stack size was %u bytes. Code line: %u\n";
-static const char REQUEST_ERRORS_AMOUNT_MSG[] = "\nRequest errors amount: %u\n";
-static const char CONNECTION_ERRORS_AMOUNT_MSG[] = "\nAP connection errors amount: %u\n";
-static const char AP_SIGNAL_STRENGTH_MSG[] = "\nSignal strength of AP: %d\n";
-static const char REQUEST_PAYLOAD_CONTENT_MSG[] = "\nRequest payload: %s\n";
-static const char CREATED_REQUEST_CONTENT_MSG[] = "\nCreated request: %s\n";
-static const char CURRENT_PARTITION_MSG[] = "\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n";
-static const char RESPONSE_OK_MSG[] = "\nResponse OK\n";
-static const char WI_FI_SCANNING_MSG[] = "Start of Wi-Fi scanning... %u\n";
-static const char WI_FI_SCANNING_SKIPPED_MSG[] = "Wi-Fi scanning skipped. %u\n";
-#endif
-
 static unsigned int milliseconds_counter_g;
 static int signal_strength_g;
 static unsigned short errors_counter_g = 0;
@@ -75,7 +62,7 @@ static void scan_access_point_task(void *pvParameters) {
 
    for (;;) {
       #ifdef ALLOW_USE_PRINTF
-      printf(WI_FI_SCANNING_MSG, milliseconds_counter_g);
+      printf("Start of Wi-Fi scanning... %u\n", milliseconds_counter_g);
       #endif
 
       xSemaphoreTake(wirelessNetworkActionsSemaphore_g, portMAX_DELAY);
@@ -97,7 +84,7 @@ static void scan_access_point_task(void *pvParameters) {
          vTaskDelay(rescan_when_connected_task_delay);
       } else {
          #ifdef ALLOW_USE_PRINTF
-         printf(WI_FI_SCANNING_SKIPPED_MSG, milliseconds_counter_g);
+         printf("Wi-Fi scanning skipped. %u\n", milliseconds_counter_g);
          #endif
 
          xSemaphoreGive(wirelessNetworkActionsSemaphore_g);
@@ -259,7 +246,7 @@ void send_status_info_task(void *pvParameters) {
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
-   //printf(REQUEST_PAYLOAD_CONTENT_MSG, request_payload);
+   //printf("\nRequest payload: %s\n", request_payload);
    #endif
 
    unsigned short request_payload_length = strnlen(request_payload, 0xFFFF);
@@ -270,7 +257,7 @@ void send_status_info_task(void *pvParameters) {
    FREE(request_payload);
 
    #ifdef ALLOW_USE_PRINTF
-   printf(CREATED_REQUEST_CONTENT_MSG, request);
+   printf("\nCreated request: %s\n", request);
    #endif
 
    char *response = send_request(request, 255, milliseconds_counter_g);
@@ -291,7 +278,7 @@ void send_status_info_task(void *pvParameters) {
          }
 
          #ifdef ALLOW_USE_PRINTF
-         printf(RESPONSE_OK_MSG);
+         printf("\nResponse OK\n");
          #endif
 
          if (strstr(response, UPDATE_FIRMWARE)) {
@@ -348,7 +335,7 @@ static void uart_event_task(void *pvParameters) {
    for (;;) {
       #ifdef MONITOR_STACK_SIZE
       unsigned int stack_size = (unsigned int) uxTaskGetStackHighWaterMark(NULL);
-      printf(REMAINING_STACK_SIZE_MSG, stack_size * 4, __LINE__);
+      printf("\nRemaining stack size was %u bytes. Code line: %u\n", stack_size * 4, __LINE__);
       #endif
 
       // Waiting for UART event.
@@ -448,7 +435,7 @@ void check_errors_amount() {
 
    if (repetitive_request_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
-      printf(REQUEST_ERRORS_AMOUNT_MSG, repetitive_request_errors_counter_g);
+      printf("\nRequest errors amount: %u\n", repetitive_request_errors_counter_g);
       #endif
 
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = REQUEST_CONNECTION_ERROR;
@@ -458,7 +445,7 @@ void check_errors_amount() {
       restart = true;
    } else if (repetitive_ap_connecting_errors_counter_g >= MAX_REPETITIVE_ALLOWED_ERRORS_AMOUNT) {
       #ifdef ALLOW_USE_PRINTF
-      printf(CONNECTION_ERRORS_AMOUNT_MSG, repetitive_ap_connecting_errors_counter_g);
+      printf("\nAP connection errors amount: %u\n", repetitive_ap_connecting_errors_counter_g);
       #endif
 
       SYSTEM_RESTART_REASON_TYPE system_restart_reason_type = ACCESS_POINT_CONNECTION_ERROR;
@@ -499,7 +486,8 @@ void app_main(void) {
 
    #ifdef ALLOW_USE_PRINTF
    const esp_partition_t *running = esp_ota_get_running_partition();
-   printf(CURRENT_PARTITION_MSG, running->label, running->type, running->subtype, running->address, running->size);
+   printf("\nRunning partition type: label: %s, %d, subtype: %d, offset: 0x%X, size: 0x%X\n",
+         running->label, running->type, running->subtype, running->address, running->size);
    #endif
 
    tcpip_adapter_init();
