@@ -45,6 +45,8 @@ static EventGroupHandle_t general_event_group_g;
 
 static QueueHandle_t uart0_queue;
 
+static SemaphoreHandle_t wirelessNetworkActionsSemaphore_g;
+
 static void milliseconds_counter() {
    milliseconds_counter_g++;
 }
@@ -67,29 +69,38 @@ static void scan_access_point_task(void *pvParameters) {
    wifi_ap_record_t scanned_access_points[1];
 
    scan_config.ssid = (unsigned char *) ACCESS_POINT_NAME;
-   scan_config.scan_type = WIFI_SCAN_TYPE_PASSIVE;
-   scan_config.scan_time.passive = 500000;
+   scan_config.bssid = 0;
+   scan_config.channel = 0;
+   scan_config.show_hidden = false;
 
    for (;;) {
       #ifdef ALLOW_USE_PRINTF
       printf(WI_FI_SCANNING_MSG, milliseconds_counter_g);
       #endif
 
-      if (is_connected_to_wifi() &&
+      xSemaphoreTake(wirelessNetworkActionsSemaphore_g, portMAX_DELAY);
+
+      if (is_connected_to_wifi() && ((xEventGroupGetBits(general_event_group_g) & UPDATE_FIRMWARE_FLAG) == 0) &&
             esp_wifi_scan_start(&scan_config, true) == ESP_OK &&
             esp_wifi_scan_get_ap_records(&scanned_access_points_amount, scanned_access_points) == ESP_OK) {
          signal_strength_g = scanned_access_points[0].rssi;
 
          #ifdef ALLOW_USE_PRINTF
-         printf(AP_SIGNAL_STRENGTH_MSG, signal_strength_g);
+         printf("\nScanned %u access points", scanned_access_points_amount);
+         for (unsigned char i = 0; i < scanned_access_points_amount; i++) {
+            printf("\nScan index: %u, ssid: %s, rssi: %d", i, scanned_access_points[i].ssid, scanned_access_points[i].rssi);
+         }
+         printf("\n");
          #endif
 
+         xSemaphoreGive(wirelessNetworkActionsSemaphore_g);
          vTaskDelay(rescan_when_connected_task_delay);
       } else {
          #ifdef ALLOW_USE_PRINTF
          printf(WI_FI_SCANNING_SKIPPED_MSG, milliseconds_counter_g);
          #endif
 
+         xSemaphoreGive(wirelessNetworkActionsSemaphore_g);
          vTaskDelay(rescan_when_not_connected_task_delay);
       }
    }
@@ -140,6 +151,7 @@ static void blink_on_send(gpio_num_t pin) {
 }
 
 void send_status_info_task(void *pvParameters) {
+   xSemaphoreTake(wirelessNetworkActionsSemaphore_g, portMAX_DELAY);
    blink_on_send(SERVER_AVAILABILITY_STATUS_LED_PIN);
 
    char signal_strength[5];
@@ -298,6 +310,7 @@ void send_status_info_task(void *pvParameters) {
       FREE(response);
    }
 
+   xSemaphoreGive(wirelessNetworkActionsSemaphore_g);
    vTaskDelete(NULL);
 }
 
@@ -394,11 +407,11 @@ static void uart_event_task(void *pvParameters) {
 static void on_wifi_connected() {
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 1);
    repetitive_ap_connecting_errors_counter_g = 0;
-
    send_status_info();
 }
 
 static void on_wifi_disconnected() {
+   repetitive_ap_connecting_errors_counter_g++;
    gpio_set_level(AP_CONNECTION_STATUS_LED_PIN, 0);
    gpio_set_level(SERVER_AVAILABILITY_STATUS_LED_PIN, 0);
 }
@@ -495,9 +508,12 @@ void app_main(void) {
    ip_info.netmask.addr = inet_addr(OWN_NETMASK);
    tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info);
 
+   wirelessNetworkActionsSemaphore_g = xSemaphoreCreateBinary();
+   xSemaphoreGive(wirelessNetworkActionsSemaphore_g);
+
    wifi_init_sta(on_wifi_connected, on_wifi_disconnected, blink_on_wifi_connection);
 
-   //xTaskCreate(scan_access_point_task, SCAN_ACCESS_POINT_TASK_NAME, configMINIMAL_STACK_SIZE * 2, NULL, 1, NULL);
+   xTaskCreate(scan_access_point_task, SCAN_ACCESS_POINT_TASK_NAME, configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
    os_timer_setfn(&errors_checker_timer_g, (os_timer_func_t *) check_errors_amount, NULL);
    os_timer_arm(&errors_checker_timer_g, ERRORS_CHECKER_INTERVAL_MS, true);

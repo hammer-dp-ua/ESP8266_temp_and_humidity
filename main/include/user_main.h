@@ -44,7 +44,7 @@
 #define STATUS_REQUESTS_SEND_INTERVAL_MS  (30 * 1000)
 #define STATUS_REQUESTS_SEND_INTERVAL     (STATUS_REQUESTS_SEND_INTERVAL_MS / portTICK_RATE_MS) // 30 sec
 
-#define ERRORS_CHECKER_INTERVAL_MS        (30 * 1000)
+#define ERRORS_CHECKER_INTERVAL_MS        (10 * 1000)
 
 #define MILLISECONDS_COUNTER_DIVIDER 10
 
@@ -98,7 +98,6 @@ const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 static void pins_config();
 static void uart_config();
 static void i2c_master_init();
-static void scan_access_point_task(void *pvParameters);
 void send_long_polling_requests_task(void *pvParameters);
 void autoconnect_task(void *pvParameters);
 void send_status_info_request_task(void *pvParameters);

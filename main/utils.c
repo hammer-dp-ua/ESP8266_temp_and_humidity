@@ -172,18 +172,8 @@ static esp_err_t esp_event_handler(void *ctx, system_event_t *event) {
          break;
       case SYSTEM_EVENT_SCAN_DONE:
          #ifdef ALLOW_USE_PRINTF
-         printf("\nScan status: %u, number: %u, scan id: %u",
+         printf("\nScan status: %u, amount: %u, scan id: %u",
                event->event_info.scan_done.status, event->event_info.scan_done.number, event->event_info.scan_done.scan_id);
-
-         unsigned short number = 10;
-         wifi_ap_record_t ap_records[10];
-
-         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_records));
-         printf("\nScanned %u access points", number);
-         for (unsigned char i = 0; i < number; i++) {
-            printf("\nScan index: %u, ssid: %s, rssi: %d", i, ap_records[i].ssid, ap_records[i].rssi);
-         }
-         printf("\n");
          #endif
 
          break;
