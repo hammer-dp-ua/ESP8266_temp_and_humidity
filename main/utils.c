@@ -380,20 +380,20 @@ char *send_request(char *request, unsigned short response_buffer_size, unsigned 
    unsigned short received_bytes_amount = 0;
    char *final_response_result = MALLOC(response_buffer_size, invocation_time);
 
-   for (;;) {
-      int send_result = send(socket_id, request, strlen(request), 0);
+   int send_result = send(socket_id, request, strlen(request), 0);
 
-      if (send_result < 0) {
-         #ifdef ALLOW_USE_PRINTF
-         printf("\nError occurred during sending. Error no.: %d\n", send_result);
-         #endif
-
-         break;
-      }
+   if (send_result < 0) {
       #ifdef ALLOW_USE_PRINTF
-      printf("\nRequest has been sent. Socket %d\n", socket_id);
+      printf("\nError occurred during sending. Error no.: %d\n", send_result);
       #endif
 
+      return NULL;
+   }
+   #ifdef ALLOW_USE_PRINTF
+   printf("\nRequest has been sent. Socket %d\n", socket_id);
+   #endif
+
+   for (;;) {
       unsigned char tmp_buffer_size = response_buffer_size <= 255 ? response_buffer_size : 255;
       char tmp_buffer[tmp_buffer_size];
       int len = recv(socket_id, tmp_buffer, tmp_buffer_size - 1, 0);
