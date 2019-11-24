@@ -24,5 +24,5 @@ typedef enum {
 } SHT21_Commands;
 
 static float sht21_calculate_humidity(unsigned short data, unsigned char checksum);
-esp_err_t sht21_get_temperature(float *temperature);
+esp_err_t sht21_get_temperature(float *temperature, unsigned short *temperature_raw);
 esp_err_t sht21_get_humidity(float *humidity);

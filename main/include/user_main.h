@@ -90,8 +90,9 @@ const char STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE[] =
       "\"resetReason\":\"<8>\","
       "\"systemRestartReason\":\"<9>\","
       "\"temperature\":<10>,"
-      "\"humidity\":<11>,"
-      "\"light\":<12>"
+      "\"temperatureRaw\":<11>,"
+      "\"humidity\":<12>,"
+      "\"light\":<13>"
       "}";
 const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 

@@ -106,7 +106,7 @@ static void blink_both_leds() {
 static void start_both_leds_blinking() {
    os_timer_disarm(&blink_both_leds_g);
    os_timer_setfn(&blink_both_leds_g, (os_timer_func_t *) blink_both_leds, NULL);
-   os_timer_arm(&blink_both_leds_g, 2000 / MILLISECONDS_COUNTER_DIVIDER, true); // 100 ms
+   os_timer_arm(&blink_both_leds_g, 2000 / MILLISECONDS_COUNTER_DIVIDER, true); // 200 ms
 }
 
 static void stop_both_leds_blinking() {
@@ -143,30 +143,58 @@ void send_status_info_task(void *pvParameters) {
 
    char signal_strength[5];
    snprintf(signal_strength, 5, "%d", signal_strength_g);
+
    char errors_counter[6];
    snprintf(errors_counter, 6, "%u", errors_counter_g);
+
    char pending_connection_errors_counter[4];
    snprintf(pending_connection_errors_counter, 4, "%u", pending_connection_errors_counter_g);
+
    char uptime[11];
    snprintf(uptime, 11, "%u", milliseconds_counter_g / MILLISECONDS_COUNTER_DIVIDER);
+
    char *build_timestamp = "";
    char free_heap_space[7];
    snprintf(free_heap_space, 7, "%u", esp_get_free_heap_size());
+
    char *reset_reason = "";
    char *system_restart_reason = "";
-   char temperature_param[7];
+
    float temperature = 0.0F;
+   char temperature_param[10];
+   temperature_param[0] = '\0';
+#ifdef DEBUGGING
+   temperature = -12.3F;
+   char *temperature_raw_param = "null";
+#else
+   char temperature_raw_param[6];
+   temperature_raw_param[0] = '\0';
+   unsigned short temperature_raw = 0;
    i2c_master_init();
-   sht21_get_temperature(&temperature);
-   snprintf(temperature_param, 7, "%d.%u", (int) temperature, abs((int) (temperature * 100)) - abs((int) (temperature)));
-   char humidity_param[7];
+   sht21_get_temperature(&temperature, &temperature_raw);
+   snprintf(temperature_raw_param, 6, "%u", temperature_raw);
+#endif
+   snprintf(temperature_param, 10, "%d.%u", (int) temperature, abs((int) (temperature * 100)) - (abs((int) (temperature)) * 100));
+
    float humidity = 0.0F;
+   char humidity_param[10];
+   humidity_param[0] = '\0';
+#ifdef DEBUGGING
+   humidity = 40.05F;
+#else
    sht21_get_humidity(&humidity);
    i2c_driver_delete(I2C_MASTER_NUM);
-   snprintf(humidity_param, 7, "%d.%u", (int) humidity, abs((int) (humidity * 100)) - abs((int) (humidity)));
-   unsigned short light = adc_read();
+#endif
+   snprintf(humidity_param, 10, "%u.%u", (unsigned int) humidity, abs((int) (humidity * 100)) - (abs((int) (humidity)) * 100));
+
+#ifdef STREET_MONITOR
    char light_param[6];
+   light_param[0] = '\0';
+   unsigned short light = adc_read();
    snprintf(light_param, 6, "%u", light);
+#else
+   char *light_param = "null";
+#endif
 
    if ((xEventGroupGetBits(general_event_group_g) & FIRST_STATUS_INFO_SENT_FLAG) == 0) {
       char build_timestamp_filled[30];
@@ -175,7 +203,7 @@ void send_status_info_task(void *pvParameters) {
 
       esp_reset_reason_t rst_info = esp_reset_reason();
 
-      switch(rst_info) {
+      switch (rst_info) {
          case ESP_RST_UNKNOWN:
             reset_reason = "Unknown";
             break;
@@ -242,7 +270,7 @@ void send_status_info_task(void *pvParameters) {
 
    const char *status_info_request_payload_template_parameters[] =
          {signal_strength, DEVICE_NAME, errors_counter, pending_connection_errors_counter, uptime, build_timestamp, free_heap_space,
-               reset_reason, system_restart_reason, temperature_param, humidity_param, light_param, NULL};
+               reset_reason, system_restart_reason, temperature_param, temperature_raw_param, humidity_param, light_param, NULL};
    char *request_payload = set_string_parameters(STATUS_INFO_REQUEST_PAYLOAD_TEMPLATE, status_info_request_payload_template_parameters);
 
    #ifdef ALLOW_USE_PRINTF
