@@ -19,6 +19,8 @@
 #define HEXADECIMAL_ADDRESS_FORMAT "%08x"
 #define WI_FI_RECONNECTION_INTERVAL_MS (30 * 1000)
 
+#define RTC_MEM_BASE 0x60001000
+
 void *set_string_parameters(const char string[], const char *parameters[]);
 char *generate_post_request(char *request);
 bool compare_strings(char *string1, char *string2);
@@ -26,8 +28,8 @@ char *put_flash_string_into_heap(const char *flash_string, unsigned int allocate
 char *generate_reset_reason();
 void wifi_init_sta(void (*on_connected)(), void (*on_disconnected)(), void (*on_connection)());
 bool is_connected_to_wifi();
-bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length);
-bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length);
+void rtc_mem_read(unsigned int src_block, void *dst, unsigned int length);
+void rtc_mem_write(unsigned int dst_block, const void *src, unsigned int length);
 int connect_to_http_server();
 char *send_request(char *request, unsigned short response_buffer_length, unsigned int invocation_time);
 #endif

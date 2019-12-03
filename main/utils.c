@@ -245,43 +245,35 @@ bool is_connected_to_wifi() {
   *             |<---- system data(256 bytes) ---->|<----------- user data(512 bytes) --------->|
   *
   * @attention Read and write unit for data stored in the RTC memory is 4 bytes.
-  * @attention src_addr is the block number (4 bytes per block). So when reading data
-  *            at the beginning of the user data segment, src_addr will be 256/4 = 64,
-  *            n will be data length.
+  * @attention src_block is the block number (4 bytes per block).
+  *            So when reading data at the beginning of the user data segment, src_block will be 256/4 = 64.
   *
-  * @param     unsigned char addr :    source address of rtc memory, addr >= 64
-  * @param     void *dst :             data pointer
-  * @param     unsigned short length : data length, unit: byte
-  *
-  * @return    true  : succeed
-  * @return    false : fail
+  * @param     unsigned short src_block : source address block of RTC memory, src_block >= 64
+  * @param     void *dst :                data pointer
+  * @param     unsigned short length :    data length, unit: byte
   */
-bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length) {
-   short blocks;
-
+void rtc_mem_read(unsigned int src_block, void *dst, unsigned int length) {
    // validate reading a user block
-   if (addr < 64) return false;
-   if (dst == 0) return false;
-   // validate 4 byte aligned
-   if (((unsigned int)dst & 0x3) != 0) return false;
+   assert(src_block >= 64);
+   assert(src_block);
+   assert(dst != NULL);
    // validate length is multiple of 4
-   if ((length & 0x3) != 0) return false;
+   assert(length > 0);
+   assert(length % 4 == 0);
 
    // check valid length from specified starting point
-   if (length > ((256 + 512) - (addr * 4))) return false;
+   assert(length <= ((256 + 512) - (src_block * 4)));
 
    // copy the data
-   for (blocks = (length >> 2) - 1; blocks >= 0; blocks--) {
-      volatile unsigned int *ram = ((unsigned int*)dst) + blocks;
-      volatile unsigned int *rtc = ((unsigned int*)PERIPHS_RTC_BASEADDR) + addr + blocks;
-      *rtc = *ram;
+   for (unsigned int read_bytes = 0; read_bytes < length; read_bytes += 4) {
+      uint32_t *ram = (uint32_t *) (dst + read_bytes);
+      uint32_t *rtc = (uint32_t *) (RTC_MEM_BASE + (src_block * 4) + read_bytes);
+      *ram = READ_PERI_REG(rtc);
    }
-
-   return true;
 }
 
 /**
-  * @brief     Write user data to  the RTC memory.
+  * @brief     Write user data to the RTC memory.
   *
   *            During deep-sleep, only RTC is working. So users can store their data
   *            in RTC memory if it is needed. The user data segment below (512 bytes)
@@ -290,39 +282,31 @@ bool rtc_mem_read(unsigned short addr, void *dst, unsigned short length) {
   *            |<---- system data(256 bytes) ---->|<----------- user data(512 bytes) --------->|
   *
   * @attention Read and write unit for data stored in the RTC memory is 4 bytes.
-  * @attention src_addr is the block number (4 bytes per block). So when storing data
-  *            at the beginning of the user data segment, src_addr will be 256/4 = 64,
-  *            n will be data length.
+  * @attention dst_block is the block number (4 bytes per block).
+  *            So when storing data at the beginning of the user data segment, dst_block will be 256/4 = 64.
   *
-  * @param     unsigned short dst :    destination address of rtc memory, dst >= 64
-  * @param     const void *src :       data pointer
-  * @param     unsigned short length : data length, unit: byte
-  *
-  * @return    true  : succeed
-  * @return    false : fail
+  * @param     unsigned short dst_block : destination address of RTC memory, dst_block >= 64
+  * @param     const void *src :          data pointer
+  * @param     unsigned short length :    data length, unit: byte
   */
-bool rtc_mem_write(unsigned short dst, const void *src, unsigned short length) {
-   short blocks;
-
-   // validate reading a user block
-   if (dst < 64) return false;
-   if (src == 0) return false;
-   // validate 4 byte aligned
-   if (((unsigned int)src & 0x3) != 0) return false;
+void rtc_mem_write(unsigned int dst_block, const void *src, unsigned int length) {
+   // validate writing a user block
+   assert(dst_block >= 64);
+   assert(dst_block < (256 * 512 / 4));
+   assert(src != NULL);
    // validate length is multiple of 4
-   if ((length & 0x3) != 0) return false;
+   assert(length > 0);
+   assert(length % 4 == 0);
 
    // check valid length from specified starting point
-   if (length > ((256 + 512) - (dst))) return false;
+   assert(length <= ((256 + 512) - (dst_block * 4)));
 
    // copy the data
-   for (blocks = (length >> 2) - 1; blocks >= 0; blocks--) {
-      volatile unsigned int *ram = ((unsigned int*)src) + blocks;
-      volatile unsigned int *rtc = ((unsigned int*)PERIPHS_RTC_BASEADDR) + dst + blocks;
-      *rtc = *ram;
+   for (unsigned int read_bytes = 0; read_bytes < length; read_bytes += 4) {
+      uint32_t *ram = (uint32_t *) (src + read_bytes);
+      uint32_t *rtc = (uint32_t *) (RTC_MEM_BASE + (dst_block * 4) + read_bytes);
+      WRITE_PERI_REG(rtc, *ram);
    }
-
-   return true;
 }
 
 int connect_to_http_server() {
