@@ -38,7 +38,7 @@ static esp_err_t i2c_master_sht21_write_and_read(unsigned char command,
    if (ret == ESP_ERR_INVALID_ARG) {
       return ret;
    }
-   ret = i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN);
+   ret = i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_WRITE, ACK_CHECK_EN); //0x80
    if (ret == ESP_ERR_INVALID_ARG) {
       i2c_cmd_link_delete(cmd);
       return ret;
@@ -48,11 +48,7 @@ static esp_err_t i2c_master_sht21_write_and_read(unsigned char command,
       i2c_cmd_link_delete(cmd);
       return ret;
    }
-   ret = i2c_master_start(cmd); // Start condition is generated before read every time. There could be a few of re-reads
-   if (ret == ESP_ERR_INVALID_ARG) {
-      i2c_cmd_link_delete(cmd);
-      return ret;
-   }
+   i2c_master_stop(cmd);
    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);
    if (ret != ESP_OK) {
       i2c_cmd_link_delete(cmd);
@@ -63,12 +59,9 @@ static esp_err_t i2c_master_sht21_write_and_read(unsigned char command,
    vTaskDelay(measurement_time);
    cmd = i2c_cmd_link_create();
    i2c_master_start(cmd);
-   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_READ, ACK_CHECK_EN);
+   i2c_master_write_byte(cmd, SHT21_ADDRESS << 1 | I2C_MASTER_READ, ACK_CHECK_EN); //0x81
 
-   for (unsigned char i = 0; i < (data_len - 1); i++) {
-      i2c_master_read_byte(cmd, read_data++, ACK_VAL);
-   }
-   i2c_master_read_byte(cmd, read_data, NACK_VAL);
+   i2c_master_read(cmd, read_data, data_len, LAST_NACK_VAL);
 
    i2c_master_stop(cmd);
    i2c_master_cmd_begin(I2C_NUM_0, cmd, 500 / portTICK_RATE_MS);

@@ -183,7 +183,8 @@ void send_status_info_task(void *pvParameters) {
    humidity = 40.05F;
 #else
    sht21_get_humidity(&humidity);
-   i2c_driver_delete(I2C_MASTER_NUM);
+
+   i2c_master_deinit();
 #endif
    snprintf(humidity_param, 10, "%u.%u", (unsigned int) humidity, abs((int) (humidity * 100)) - (abs((int) (humidity)) * 100));
 
@@ -491,12 +492,22 @@ static void i2c_master_init() {
    i2c_config_t conf;
    conf.mode = I2C_MODE_MASTER;
    conf.sda_io_num = I2C_MASTER_SDA_IO;
-   conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
+   conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
    conf.scl_io_num = I2C_MASTER_SCL_IO;
-   conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+   conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
 
    ESP_ERROR_CHECK(i2c_driver_install(I2C_MASTER_NUM, conf.mode));
    ESP_ERROR_CHECK(i2c_param_config(I2C_MASTER_NUM, &conf));
+}
+
+static void i2c_master_deinit() {
+   i2c_driver_delete(I2C_MASTER_NUM);
+   gpio_config_t output_pins;
+   output_pins.mode = GPIO_MODE_INPUT;
+   output_pins.pin_bit_mask = (1<<I2C_MASTER_SCL_IO) | (1<<I2C_MASTER_SDA_IO);
+   output_pins.pull_up_en = GPIO_PULLUP_DISABLE;
+   output_pins.pull_down_en = GPIO_PULLDOWN_DISABLE;
+   gpio_config(&output_pins);
 }
 
 void app_main(void) {

@@ -99,6 +99,7 @@ const char UPDATE_FIRMWARE[] = "\"updateFirmware\":true";
 static void pins_config();
 static void uart_config();
 static void i2c_master_init();
+static void i2c_master_deinit();
 void send_long_polling_requests_task(void *pvParameters);
 void autoconnect_task(void *pvParameters);
 void send_status_info_request_task(void *pvParameters);
