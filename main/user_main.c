@@ -170,7 +170,6 @@ void send_status_info_task(void *pvParameters) {
    char temperature_raw_param[6];
    temperature_raw_param[0] = '\0';
    unsigned short temperature_raw = 0;
-   i2c_master_init();
    sht21_get_temperature(&temperature, &temperature_raw);
    snprintf(temperature_raw_param, 6, "%u", temperature_raw);
 #endif
@@ -183,8 +182,6 @@ void send_status_info_task(void *pvParameters) {
    humidity = 40.05F;
 #else
    sht21_get_humidity(&humidity);
-
-   i2c_master_deinit();
 #endif
    snprintf(humidity_param, 10, "%u.%u", (unsigned int) humidity, abs((int) (humidity * 100)) - (abs((int) (humidity)) * 100));
 
@@ -514,6 +511,7 @@ void app_main(void) {
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
+   i2c_master_init();
    uart_config();
 
    start_both_leds_blinking();
