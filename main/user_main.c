@@ -163,28 +163,22 @@ void send_status_info_task(void *pvParameters) {
    float temperature = 0.0F;
    char temperature_param[10];
    temperature_param[0] = '\0';
-#ifdef DEBUGGING
-   temperature = -12.3F;
-   char *temperature_raw_param = "null";
-#else
    char temperature_raw_param[6];
    temperature_raw_param[0] = '\0';
    unsigned short temperature_raw = 0;
+   i2c_master_init();
    sht21_get_temperature(&temperature, &temperature_raw);
+   i2c_master_deinit();
    snprintf(temperature_raw_param, 6, "%u", temperature_raw);
-#endif
    snprintf(temperature_param, 10, "%d.%u", (int) temperature, abs((int) (temperature * 100)) - (abs((int) (temperature)) * 100));
 
    float humidity = 0.0F;
    char humidity_param[10];
    humidity_param[0] = '\0';
-#ifdef DEBUGGING
-   humidity = 40.05F;
-#else
+   i2c_master_init();
    sht21_get_humidity(&humidity);
-#endif
+   i2c_master_deinit();
    snprintf(humidity_param, 10, "%u.%u", (unsigned int) humidity, abs((int) (humidity * 100)) - (abs((int) (humidity)) * 100));
-
 #ifdef STREET_MONITOR
    char light_param[6];
    light_param[0] = '\0';
@@ -511,7 +505,7 @@ void app_main(void) {
    general_event_group_g = xEventGroupCreate();
 
    pins_config();
-   i2c_master_init();
+   //i2c_master_init();
    uart_config();
 
    start_both_leds_blinking();
