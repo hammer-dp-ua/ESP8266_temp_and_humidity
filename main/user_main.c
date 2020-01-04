@@ -3,7 +3,7 @@
  *
  * Required connections:
  * GPIO15 to GND
- * GPIO to GND or to "+" for flashing
+ * GPIO to "+" through 5-10k resistor OR to GND for flashing
  * EN to "+"
  *
  * SPI SPI_CPOL & SPI_CPHA:

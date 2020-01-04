@@ -27,11 +27,22 @@
 #ifndef MAIN_HEADER
 #define MAIN_HEADER
 
+#ifdef ROOM_MONITOR
+#define AP_CONNECTION_STATUS_LED_PIN         GPIO_NUM_14
+#define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_NUM_12
+#else
 #define AP_CONNECTION_STATUS_LED_PIN         GPIO_NUM_5
 #define SERVER_AVAILABILITY_STATUS_LED_PIN   GPIO_NUM_4
+#endif
 
-#define I2C_MASTER_SCL_IO  GPIO_NUM_2  // gpio number for I2C master clock, D4
+#ifdef ROOM_MONITOR
+#define I2C_MASTER_SDA_IO  GPIO_NUM_5
+#define I2C_MASTER_SCL_IO  GPIO_NUM_4
+#else
 #define I2C_MASTER_SDA_IO  GPIO_NUM_12 // gpio number for I2C master data, D6
+#define I2C_MASTER_SCL_IO  GPIO_NUM_2  // gpio number for I2C master clock, D4
+#endif
+
 #define I2C_MASTER_NUM     I2C_NUM_0 // I2C port number for master dev
 
 #define SERVER_IS_AVAILABLE_FLAG
